@@ -15,7 +15,6 @@
         button:hover { background-color: #0097a7; }
         .btn-capture { background-color: #e91e63; color: white; }
         .btn-capture:hover { background-color: #c2185b; }
-        .btn-cam { background-color: #ff9800; color: black; }
         .video-container { display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 1200px; flex-wrap: wrap; }
         .view-box { position: relative; width: 48%; min-width: 300px; background-color: #000; border: 2px solid #00bcd4; border-radius: 8px; overflow: hidden; aspect-ratio: 9/16; }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -27,12 +26,10 @@
 <body>
 
     <div class="controls">
-        <div><label>Sagital: </label><input type="file" id="uploadLateral" accept="video/*"></div>
-        <div><label>Frontal: </label><input type="file" id="uploadFrontal" accept="video/*"></div>
+        <div><label>Video Sagital (Lento): </label><input type="file" id="uploadLateral" accept="video/*"></div>
+        <div><label>Video Frontal (Lento): </label><input type="file" id="uploadFrontal" accept="video/*"></div>
         <button id="btnPlayPause">Reproducir / Pausar Ambos</button>
         <button class="btn-capture" id="btnCapture">📸 Capturar Resultados</button>
-        <button class="btn-cam" id="btnCamLateral">📷 Vivo Sagital</button>
-        <button class="btn-cam" id="btnCamFrontal">📷 Vivo Frontal</button>
     </div>
 
     <div class="video-container">
@@ -51,7 +48,7 @@
     <div class="analysis-panel" id="analysisText">
         <div class="result-section">
             <h3 style="color: #00bcd4;">Resultados: Plano Frontal</h3>
-            <p id="resFrontal">Esperando captura... Presiona "Capturar Resultados" en el momento crítico.</p>
+            <p id="resFrontal">Esperando captura... Sube los videos en cámara lenta y presiona "Capturar Resultados".</p>
         </div>
         <div class="result-section">
             <h3 style="color: #00bcd4;">Resultados: Plano Sagital</h3>
@@ -73,13 +70,13 @@
         return Math.round(angle);
     }
 
-    // Dibuja la cara tipo malla geométrica
+    // Dibuja la cara tipo malla geométrica (sin dibujar los puntos base)
     function drawGeometricFace(ctx, lm, w, h) {
         if(!lm[0] || lm[0].visibility < 0.5) return;
         const faceLines = [
             [0,1],[1,2],[2,3],[3,7],[7,9],[9,0], // Izquierda
             [0,4],[4,5],[5,6],[6,8],[8,10],[10,0], // Derecha
-            [9,10], [1,4], [3,9], [6,10] // Conexiones internas para efecto malla
+            [9,10], [1,4], [3,9], [6,10] 
         ];
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.5;
@@ -91,13 +88,12 @@
         });
     }
 
-    // Dibuja el cuerpo (incluye brazos hasta muñeca, omite manos)
     function drawBodyConnections(ctx, lm, w, h) {
         const bodyConnections = [
             [11,12], [11,23], [12,24], [23,24], // Tronco
             [23,25], [25,27], [24,26], [26,28], [27,29], [28,30], [29,31], [30,32], [27,31], [28,32], // Piernas y pies
-            [11,13], [13,15], // Brazo izquierdo (hasta muñeca)
-            [12,14], [14,16]  // Brazo derecho (hasta muñeca)
+            [11,13], [13,15], // Brazo izquierdo
+            [12,14], [14,16]  // Brazo derecho
         ];
         ctx.strokeStyle = "#00bcd4";
         ctx.lineWidth = 3;
@@ -109,11 +105,12 @@
         });
     }
 
-    // Dibuja los puntos (marcadores) excluyendo manos (índices 17 al 22)
+    // Dibuja los puntos (marcadores) excluyendo CARA (0-10) y MANOS (17-22)
     function drawMarkers(ctx, lm, w, h) {
         ctx.fillStyle = "#ffffff";
         for (let i = 0; i < lm.length; i++) {
-            if (i >= 17 && i <= 22) continue; // Omite manos
+            if (i <= 10) continue; // Omite puntos de la cara
+            if (i >= 17 && i <= 22) continue; // Omite puntos de las manos
             if (lm[i].visibility > 0.6) {
                 ctx.beginPath(); ctx.arc(lm[i].x * w, lm[i].y * h, 4, 0, 2 * Math.PI); ctx.fill();
             }
@@ -143,18 +140,15 @@
             drawBodyConnections(ctxLateral, lm, w, h);
             drawMarkers(ctxLateral, lm, w, h);
 
-            // Índices lado derecho para perfil sagital
             const hombro = lm[12], codo = lm[14], muñeca = lm[16];
             const cadera = lm[24], rodilla = lm[26], tobillo = lm[28], pie = lm[32];
             
-            // Cálculos
             currentAngles.hombroLat = calcAngle(cadera, hombro, codo);
             currentAngles.codoLat = calcAngle(hombro, codo, muñeca);
             currentAngles.cadera = calcAngle(hombro, cadera, rodilla);
             currentAngles.rodillaLat = calcAngle(cadera, rodilla, tobillo);
             currentAngles.tobillo = calcAngle(rodilla, tobillo, pie);
 
-            // Dibujar solo números en articulaciones
             drawTextAngle(ctxLateral, currentAngles.hombroLat, hombro, w, h);
             drawTextAngle(ctxLateral, currentAngles.codoLat, codo, w, h);
             drawTextAngle(ctxLateral, currentAngles.cadera, cadera, w, h);
@@ -175,10 +169,8 @@
             drawBodyConnections(ctxFrontal, lm, w, h);
             drawMarkers(ctxFrontal, lm, w, h);
 
-            // Puntos Izquierdos
             const homIzq = lm[11], codIzq = lm[13], muñIzq = lm[15];
             const cadIzq = lm[23], rodIzq = lm[25], tobIzq = lm[27];
-            // Puntos Derechos
             const homDer = lm[12], codDer = lm[14], muñDer = lm[16];
             const cadDer = lm[24], rodDer = lm[26], tobDer = lm[28];
 
@@ -246,13 +238,6 @@
     }
     setupVideo('uploadLateral', videoLateral, canvasLateral);
     setupVideo('uploadFrontal', videoFrontal, canvasFrontal);
-
-    document.getElementById('btnCamLateral').addEventListener('click', () => {
-        const cam = new Camera(videoLateral, { onFrame: async () => { await poseLateral.send({image: videoLateral}); }, width: 640, height: 480 }); cam.start();
-    });
-    document.getElementById('btnCamFrontal').addEventListener('click', () => {
-        const cam = new Camera(videoFrontal, { onFrame: async () => { await poseFrontal.send({image: videoFrontal}); }, width: 640, height: 480 }); cam.start();
-    });
 </script>
 </body>
 </html>
