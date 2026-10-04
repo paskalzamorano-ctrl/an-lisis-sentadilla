@@ -61,13 +61,8 @@
     </div>
 
 <script>
-    const videoLateral = document.getElementById('videoLateral');
-    const canvasLateral = document.getElementById('canvasLateral');
-    const ctxLateral = canvasLateral.getContext('2d');
-    
-    const videoFrontal = document.getElementById('videoFrontal');
-    const canvasFrontal = document.getElementById('canvasFrontal');
-    const ctxFrontal = canvasFrontal.getContext('2d');
+    const videoLateral = document.getElementById('videoLateral'), canvasLateral = document.getElementById('canvasLateral'), ctxLateral = canvasLateral.getContext('2d');
+    const videoFrontal = document.getElementById('videoFrontal'), canvasFrontal = document.getElementById('canvasFrontal'), ctxFrontal = canvasFrontal.getContext('2d');
 
     let currentAngles = { cadera: 0, rodillaLat: 0, tobillo: 0, hombroLat: 0, codoLat: 0, valgoIzq: 0, valgoDer: 0, hombroFIzq: 0, codoFIzq: 0, hombroFDer: 0, codoFDer: 0 };
 
@@ -81,31 +76,18 @@
 
     function drawGeometricFace(ctx, lm, w, h) {
         if(!lm[0] || lm[0].visibility < 0.5) return;
-        const faceLines = [
-            [0,1],[1,2],[2,3],[3,7],[7,9],[9,0], 
-            [0,4],[4,5],[5,6],[6,8],[8,10],[10,0], 
-            [9,10], [1,4], [3,9], [6,10] 
-        ];
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.5;
+        const faceLines = [[0,1],[1,2],[2,3],[3,7],[7,9],[9,0], [0,4],[4,5],[5,6],[6,8],[8,10],[10,0], [9,10], [1,4], [3,9], [6,10]];
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5;
         faceLines.forEach(conn => {
             const p1 = lm[conn[0]], p2 = lm[conn[1]];
-            if(p1 && p2) {
-                ctx.beginPath(); ctx.moveTo(p1.x * w, p1.y * h); ctx.lineTo(p2.x * w, p2.y * h); ctx.stroke();
-            }
+            if(p1 && p2) { ctx.beginPath(); ctx.moveTo(p1.x * w, p1.y * h); ctx.lineTo(p2.x * w, p2.y * h); ctx.stroke(); }
         });
     }
 
     function drawBodyConnections(ctx, lm, w, h) {
-        const bodyConnections = [
-            [11,12], [11,23], [12,24], [23,24], 
-            [23,25], [25,27], [24,26], [26,28], [27,29], [28,30], [29,31], [30,32], [27,31], [28,32], 
-            [11,13], [13,15], 
-            [12,14], [14,16]  
-        ];
-        ctx.strokeStyle = "#00bcd4";
-        ctx.lineWidth = 3;
-        bodyConnections.forEach(conn => {
+        const bodyLines = [[11,12], [11,23], [12,24], [23,24], [23,25], [25,27], [24,26], [26,28], [27,29], [28,30], [29,31], [30,32], [27,31], [28,32], [11,13], [13,15], [12,14], [14,16]];
+        ctx.strokeStyle = "#00bcd4"; ctx.lineWidth = 2.5;
+        bodyLines.forEach(conn => {
             const p1 = lm[conn[0]], p2 = lm[conn[1]];
             if(p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
                 ctx.beginPath(); ctx.moveTo(p1.x * w, p1.y * h); ctx.lineTo(p2.x * w, p2.y * h); ctx.stroke();
@@ -113,47 +95,56 @@
         });
     }
 
+    // AHORA DIBUJA ANILLOS HUECOS PARA DEJAR VER TUS MARCADORES NEGROS
     function drawMarkers(ctx, lm, w, h) {
-        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#00bcd4"; 
+        ctx.lineWidth = 2;
         for (let i = 0; i < lm.length; i++) {
-            if (i <= 10) continue; 
-            if (i >= 17 && i <= 22) continue; 
+            if (i <= 10 || (i >= 17 && i <= 22)) continue; // Omite cara y manos
             if (lm[i].visibility > 0.6) {
-                ctx.beginPath(); ctx.arc(lm[i].x * w, lm[i].y * h, 4, 0, 2 * Math.PI); ctx.fill();
+                ctx.beginPath(); ctx.arc(lm[i].x * w, lm[i].y * h, 6, 0, 2 * Math.PI); ctx.stroke();
             }
         }
     }
 
     function drawTextAngle(ctx, angle, point, w, h, offsetX = 15, offsetY = 0) {
         if(angle > 0) {
-            ctx.font = "bold 20px Arial"; 
-            ctx.fillStyle = "yellow";
-            ctx.shadowColor = "black";
-            ctx.shadowBlur = 4;
+            ctx.font = "bold 20px Arial"; ctx.fillStyle = "yellow";
+            ctx.shadowColor = "black"; ctx.shadowBlur = 4;
             ctx.fillText(`${angle}°`, point.x * w + offsetX, point.y * h + offsetY);
             ctx.shadowBlur = 0; 
         }
     }
 
-    // AQUI ESTÁ EL CAMBIO CLAVE PARA CELULARES: modelComplexity: 0 en lugar de 1
     const poseOptions = { modelComplexity: 0, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 };
     const poseLateral = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseLateral.setOptions(poseOptions);
     const poseFrontal = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseFrontal.setOptions(poseOptions);
 
+    // PROCESAMIENTO SAGITAL DINÁMICO (Detecta automáticamente qué perfil estás mostrando)
     poseLateral.onResults((results) => {
         ctxLateral.clearRect(0, 0, canvasLateral.width, canvasLateral.height); 
         if (results.poseLandmarks) {
             const lm = results.poseLandmarks;
             const w = canvasLateral.width, h = canvasLateral.height;
-            drawGeometricFace(ctxLateral, lm, w, h);
-            drawBodyConnections(ctxLateral, lm, w, h);
-            drawMarkers(ctxLateral, lm, w, h);
-            const hombro = lm[12], codo = lm[14], muñeca = lm[16], cadera = lm[24], rodilla = lm[26], tobillo = lm[28], pie = lm[32];
+            drawGeometricFace(ctxLateral, lm, w, h); drawBodyConnections(ctxLateral, lm, w, h); drawMarkers(ctxLateral, lm, w, h);
+            
+            // Evalúa qué lado tiene mejor visibilidad
+            const visDerecha = (lm[12].visibility + lm[24].visibility + lm[26].visibility + lm[28].visibility);
+            const visIzquierda = (lm[11].visibility + lm[23].visibility + lm[25].visibility + lm[27].visibility);
+            
+            let hombro, codo, muñeca, cadera, rodilla, tobillo, pie;
+            if (visDerecha > visIzquierda) { // Perfil derecho
+                hombro = lm[12]; codo = lm[14]; muñeca = lm[16]; cadera = lm[24]; rodilla = lm[26]; tobillo = lm[28]; pie = lm[32];
+            } else { // Perfil izquierdo
+                hombro = lm[11]; codo = lm[13]; muñeca = lm[15]; cadera = lm[23]; rodilla = lm[25]; tobillo = lm[27]; pie = lm[31];
+            }
+
             currentAngles.hombroLat = calcAngle(cadera, hombro, codo);
             currentAngles.codoLat = calcAngle(hombro, codo, muñeca);
             currentAngles.cadera = calcAngle(hombro, cadera, rodilla);
             currentAngles.rodillaLat = calcAngle(cadera, rodilla, tobillo);
             currentAngles.tobillo = calcAngle(rodilla, tobillo, pie);
+
             drawTextAngle(ctxLateral, currentAngles.hombroLat, hombro, w, h);
             drawTextAngle(ctxLateral, currentAngles.codoLat, codo, w, h);
             drawTextAngle(ctxLateral, currentAngles.cadera, cadera, w, h);
@@ -167,46 +158,35 @@
         if (results.poseLandmarks) {
             const lm = results.poseLandmarks;
             const w = canvasFrontal.width, h = canvasFrontal.height;
-            drawGeometricFace(ctxFrontal, lm, w, h);
-            drawBodyConnections(ctxFrontal, lm, w, h);
-            drawMarkers(ctxFrontal, lm, w, h);
+            drawGeometricFace(ctxFrontal, lm, w, h); drawBodyConnections(ctxFrontal, lm, w, h); drawMarkers(ctxFrontal, lm, w, h);
+            
             const homIzq = lm[11], codIzq = lm[13], muñIzq = lm[15], cadIzq = lm[23], rodIzq = lm[25], tobIzq = lm[27];
             const homDer = lm[12], codDer = lm[14], muñDer = lm[16], cadDer = lm[24], rodDer = lm[26], tobDer = lm[28];
-            currentAngles.hombroFIzq = calcAngle(cadIzq, homIzq, codIzq);
-            currentAngles.codoFIzq = calcAngle(homIzq, codIzq, muñIzq);
-            currentAngles.valgoIzq = calcAngle(cadIzq, rodIzq, tobIzq);
-            currentAngles.hombroFDer = calcAngle(cadDer, homDer, codDer);
-            currentAngles.codoFDer = calcAngle(homDer, codDer, muñDer);
-            currentAngles.valgoDer = calcAngle(cadDer, rodDer, tobDer);
-            drawTextAngle(ctxFrontal, currentAngles.hombroFIzq, homIzq, w, h);
-            drawTextAngle(ctxFrontal, currentAngles.codoFIzq, codIzq, w, h);
-            drawTextAngle(ctxFrontal, currentAngles.valgoIzq, rodIzq, w, h);
-            drawTextAngle(ctxFrontal, currentAngles.hombroFDer, homDer, w, h, -45);
-            drawTextAngle(ctxFrontal, currentAngles.codoFDer, codDer, w, h, -45);
-            drawTextAngle(ctxFrontal, currentAngles.valgoDer, rodDer, w, h, -45);
+            
+            currentAngles.hombroFIzq = calcAngle(cadIzq, homIzq, codIzq); currentAngles.codoFIzq = calcAngle(homIzq, codIzq, muñIzq); currentAngles.valgoIzq = calcAngle(cadIzq, rodIzq, tobIzq);
+            currentAngles.hombroFDer = calcAngle(cadDer, homDer, codDer); currentAngles.codoFDer = calcAngle(homDer, codDer, muñDer); currentAngles.valgoDer = calcAngle(cadDer, rodDer, tobDer);
+            
+            drawTextAngle(ctxFrontal, currentAngles.hombroFIzq, homIzq, w, h); drawTextAngle(ctxFrontal, currentAngles.codoFIzq, codIzq, w, h); drawTextAngle(ctxFrontal, currentAngles.valgoIzq, rodIzq, w, h);
+            drawTextAngle(ctxFrontal, currentAngles.hombroFDer, homDer, w, h, -45); drawTextAngle(ctxFrontal, currentAngles.codoFDer, codDer, w, h, -45); drawTextAngle(ctxFrontal, currentAngles.valgoDer, rodDer, w, h, -45);
         }
     });
 
-    let isProcessingLat = false;
-    let lastTimeLat = -1;
+    let isProcessingLat = false, lastTimeLat = -1;
     function processLateral() {
         if (!videoLateral.paused && !videoLateral.ended) {
             if (!isProcessingLat && videoLateral.currentTime !== lastTimeLat) {
-                isProcessingLat = true;
-                lastTimeLat = videoLateral.currentTime;
+                isProcessingLat = true; lastTimeLat = videoLateral.currentTime;
                 poseLateral.send({image: videoLateral}).then(() => { isProcessingLat = false; }).catch(() => { isProcessingLat = false; });
             }
             requestAnimationFrame(processLateral);
         }
     }
 
-    let isProcessingFront = false;
-    let lastTimeFront = -1;
+    let isProcessingFront = false, lastTimeFront = -1;
     function processFrontal() {
         if (!videoFrontal.paused && !videoFrontal.ended) {
             if (!isProcessingFront && videoFrontal.currentTime !== lastTimeFront) {
-                isProcessingFront = true;
-                lastTimeFront = videoFrontal.currentTime;
+                isProcessingFront = true; lastTimeFront = videoFrontal.currentTime;
                 poseFrontal.send({image: videoFrontal}).then(() => { isProcessingFront = false; }).catch(() => { isProcessingFront = false; });
             }
             requestAnimationFrame(processFrontal);
@@ -217,27 +197,19 @@
     videoFrontal.addEventListener('play', () => { requestAnimationFrame(processFrontal); });
 
     document.getElementById('btnPlayPause').addEventListener('click', () => {
-        if (videoLateral.paused || videoFrontal.paused) {
-            videoLateral.play(); 
-            videoFrontal.play();
-        } else {
-            videoLateral.pause(); 
-            videoFrontal.pause();
-        }
+        if (videoLateral.paused || videoFrontal.paused) { videoLateral.play(); videoFrontal.play(); } 
+        else { videoLateral.pause(); videoFrontal.pause(); }
     });
 
     document.getElementById('btnCapture').addEventListener('click', () => {
-        videoLateral.pause(); 
-        videoFrontal.pause();
-        
+        videoLateral.pause(); videoFrontal.pause();
         document.getElementById('resFrontal').innerHTML = `
             <ul style="line-height: 1.8; font-size: 16px;">
                 <li><strong>Ángulo Hombro (Izq / Der):</strong> ${currentAngles.hombroFIzq}° / ${currentAngles.hombroFDer}°</li>
                 <li><strong>Ángulo Codo (Izq / Der):</strong> ${currentAngles.codoFIzq}° / ${currentAngles.codoFDer}°</li>
                 <li><strong>Valgo Rodilla Izquierda:</strong> <span style="color:yellow; font-weight:bold;">${currentAngles.valgoIzq}°</span></li>
                 <li><strong>Valgo Rodilla Derecha:</strong> <span style="color:yellow; font-weight:bold;">${currentAngles.valgoDer}°</span></li>
-            </ul>
-        `;
+            </ul>`;
         document.getElementById('resSagital').innerHTML = `
             <ul style="line-height: 1.8; font-size: 16px;">
                 <li><strong>Ángulo Hombro:</strong> ${currentAngles.hombroLat}°</li>
@@ -245,8 +217,7 @@
                 <li><strong>Flexión Tronco (Cadera):</strong> <span style="color:yellow; font-weight:bold;">${currentAngles.cadera}°</span></li>
                 <li><strong>Flexión de Rodilla:</strong> <span style="color:yellow; font-weight:bold;">${currentAngles.rodillaLat}°</span></li>
                 <li><strong>Dorsiflexión Tobillo:</strong> <span style="color:yellow; font-weight:bold;">${currentAngles.tobillo}°</span></li>
-            </ul>
-        `;
+            </ul>`;
     });
 
     function setupVideo(inputId, videoEl, canvasEl) {
@@ -254,10 +225,7 @@
             const file = e.target.files[0];
             if(!file) return;
             videoEl.src = URL.createObjectURL(file);
-            videoEl.onloadedmetadata = () => { 
-                canvasEl.width = videoEl.videoWidth; 
-                canvasEl.height = videoEl.videoHeight; 
-            };
+            videoEl.onloadedmetadata = () => { canvasEl.width = videoEl.videoWidth; canvasEl.height = videoEl.videoHeight; };
         });
     }
     setupVideo('uploadLateral', videoLateral, canvasLateral);
