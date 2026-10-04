@@ -4,96 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análisis Biomecánico - Sentadilla</title>
-    <!-- Librerías de MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .controls {
-            background-color: #1e1e1e;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-            width: 100%;
-            max-width: 1200px;
-        }
-        button, input[type="file"] {
-            padding: 10px 15px;
-            background-color: #00bcd4;
-            color: black;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .controls { background-color: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1200px; }
+        button, input[type="file"] { padding: 10px 15px; background-color: #00bcd4; color: black; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #0097a7; }
         .btn-capture { background-color: #e91e63; color: white; }
         .btn-capture:hover { background-color: #c2185b; }
         .btn-cam { background-color: #ff9800; color: black; }
-        
-        .video-container {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            width: 100%;
-            max-width: 1200px;
-            flex-wrap: wrap;
-        }
-        .view-box {
-            position: relative;
-            width: 48%;
-            min-width: 300px;
-            background-color: #000;
-            border: 2px solid #00bcd4;
-            border-radius: 8px;
-            overflow: hidden;
-            aspect-ratio: 9/16;
-        }
-        video, canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;
-        }
-        .analysis-panel {
-            background-color: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            width: 100%;
-            max-width: 1160px;
-            display: flex;
-            gap: 20px;
-        }
-        .result-section {
-            flex: 1;
-            background-color: #2d2d2d;
-            padding: 15px;
-            border-radius: 8px;
-        }
-        h3.title-overlay {
-            position: absolute; top: 10px; left: 10px; z-index: 10; margin:0; 
-            text-shadow: 2px 2px 4px #000; color: white;
-        }
+        .video-container { display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 1200px; flex-wrap: wrap; }
+        .view-box { position: relative; width: 48%; min-width: 300px; background-color: #000; border: 2px solid #00bcd4; border-radius: 8px; overflow: hidden; aspect-ratio: 9/16; }
+        video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+        .analysis-panel { background-color: #1e1e1e; padding: 20px; border-radius: 8px; margin-top: 20px; width: 100%; max-width: 1160px; display: flex; gap: 20px; }
+        .result-section { flex: 1; background-color: #2d2d2d; padding: 15px; border-radius: 8px; }
+        h3.title-overlay { position: absolute; top: 10px; left: 10px; z-index: 10; margin:0; text-shadow: 2px 2px 4px #000; color: white; }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <div><label>Sagital (Perfil): </label><input type="file" id="uploadLateral" accept="video/*"></div>
-        <div><label>Frontal (Frente): </label><input type="file" id="uploadFrontal" accept="video/*"></div>
+        <div><label>Sagital: </label><input type="file" id="uploadLateral" accept="video/*"></div>
+        <div><label>Frontal: </label><input type="file" id="uploadFrontal" accept="video/*"></div>
         <button id="btnPlayPause">Reproducir / Pausar Ambos</button>
         <button class="btn-capture" id="btnCapture">📸 Capturar Resultados</button>
         <button class="btn-cam" id="btnCamLateral">📷 Vivo Sagital</button>
@@ -101,13 +36,11 @@
     </div>
 
     <div class="video-container">
-        <!-- Plano Sagital -->
         <div class="view-box">
             <h3 class="title-overlay">Plano Sagital</h3>
             <video id="videoLateral" loop playsinline muted></video>
             <canvas id="canvasLateral"></canvas>
         </div>
-        <!-- Plano Frontal -->
         <div class="view-box">
             <h3 class="title-overlay">Plano Frontal</h3>
             <video id="videoFrontal" loop playsinline muted></video>
@@ -115,7 +48,6 @@
         </div>
     </div>
 
-    <!-- Panel de Resultados Dividido -->
     <div class="analysis-panel" id="analysisText">
         <div class="result-section">
             <h3 style="color: #00bcd4;">Resultados: Plano Frontal</h3>
@@ -131,52 +63,71 @@
     const videoLateral = document.getElementById('videoLateral'), canvasLateral = document.getElementById('canvasLateral'), ctxLateral = canvasLateral.getContext('2d');
     const videoFrontal = document.getElementById('videoFrontal'), canvasFrontal = document.getElementById('canvasFrontal'), ctxFrontal = canvasFrontal.getContext('2d');
 
-    let currentAngles = { cadera: 0, rodillaLat: 0, tobillo: 0, valgoIzq: 0, valgoDer: 0 };
+    let currentAngles = { cadera: 0, rodillaLat: 0, tobillo: 0, hombroLat: 0, codoLat: 0, valgoIzq: 0, valgoDer: 0, hombroFIzq: 0, codoFIzq: 0, hombroFDer: 0, codoFDer: 0 };
 
-    // Función matemática para ángulos
     function calcAngle(a, b, c) {
-        // Verifica si la IA realmente está viendo los 3 puntos con buena confianza (> 60%)
-        if (a.visibility < 0.6 || b.visibility < 0.6 || c.visibility < 0.6) return 0;
+        if (!a || !b || !c || a.visibility < 0.6 || b.visibility < 0.6 || c.visibility < 0.6) return 0;
         let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
         let angle = Math.abs(radians * 180.0 / Math.PI);
         if (angle > 180.0) angle = 360.0 - angle;
         return Math.round(angle);
     }
 
-    // Dibujar máscara geométrica en la cara
-    function drawFaceMask(ctx, landmarks, width, height) {
-        if(landmarks[0].visibility < 0.5) return;
-        ctx.fillStyle = "rgba(40, 40, 40, 0.8)"; // Máscara oscura
-        ctx.beginPath();
-        // Conectar nariz (0), orejas (7,8) y boca (9,10) en un polígono
-        ctx.moveTo(landmarks[0].x * width, landmarks[0].y * height);
-        ctx.lineTo(landmarks[7].x * width, landmarks[7].y * height);
-        ctx.lineTo(landmarks[9].x * width, landmarks[9].y * height);
-        ctx.lineTo(landmarks[10].x * width, landmarks[10].y * height);
-        ctx.lineTo(landmarks[8].x * width, landmarks[8].y * height);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    function drawCustomConnections(ctx, landmarks, width, height) {
-        // Define conexiones del cuerpo ignorando la cara
-        const bodyConnections = [[11,12], [11,23], [12,24], [23,24], [23,25], [24,26], [25,27], [26,28], [27,29], [28,30], [29,31], [30,32]];
-        ctx.strokeStyle = "#00bcd4";
-        ctx.lineWidth = 3;
-        bodyConnections.forEach(conn => {
-            const p1 = landmarks[conn[0]], p2 = landmarks[conn[1]];
-            if(p1.visibility > 0.5 && p2.visibility > 0.5) {
-                ctx.beginPath();
-                ctx.moveTo(p1.x * width, p1.y * height);
-                ctx.lineTo(p2.x * width, p2.y * height);
-                ctx.stroke();
+    // Dibuja la cara tipo malla geométrica
+    function drawGeometricFace(ctx, lm, w, h) {
+        if(!lm[0] || lm[0].visibility < 0.5) return;
+        const faceLines = [
+            [0,1],[1,2],[2,3],[3,7],[7,9],[9,0], // Izquierda
+            [0,4],[4,5],[5,6],[6,8],[8,10],[10,0], // Derecha
+            [9,10], [1,4], [3,9], [6,10] // Conexiones internas para efecto malla
+        ];
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        faceLines.forEach(conn => {
+            const p1 = lm[conn[0]], p2 = lm[conn[1]];
+            if(p1 && p2) {
+                ctx.beginPath(); ctx.moveTo(p1.x * w, p1.y * h); ctx.lineTo(p2.x * w, p2.y * h); ctx.stroke();
             }
         });
     }
 
-    function setupPose(pose) {
-        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    // Dibuja el cuerpo (incluye brazos hasta muñeca, omite manos)
+    function drawBodyConnections(ctx, lm, w, h) {
+        const bodyConnections = [
+            [11,12], [11,23], [12,24], [23,24], // Tronco
+            [23,25], [25,27], [24,26], [26,28], [27,29], [28,30], [29,31], [30,32], [27,31], [28,32], // Piernas y pies
+            [11,13], [13,15], // Brazo izquierdo (hasta muñeca)
+            [12,14], [14,16]  // Brazo derecho (hasta muñeca)
+        ];
+        ctx.strokeStyle = "#00bcd4";
+        ctx.lineWidth = 3;
+        bodyConnections.forEach(conn => {
+            const p1 = lm[conn[0]], p2 = lm[conn[1]];
+            if(p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
+                ctx.beginPath(); ctx.moveTo(p1.x * w, p1.y * h); ctx.lineTo(p2.x * w, p2.y * h); ctx.stroke();
+            }
+        });
     }
+
+    // Dibuja los puntos (marcadores) excluyendo manos (índices 17 al 22)
+    function drawMarkers(ctx, lm, w, h) {
+        ctx.fillStyle = "#ffffff";
+        for (let i = 0; i < lm.length; i++) {
+            if (i >= 17 && i <= 22) continue; // Omite manos
+            if (lm[i].visibility > 0.6) {
+                ctx.beginPath(); ctx.arc(lm[i].x * w, lm[i].y * h, 4, 0, 2 * Math.PI); ctx.fill();
+            }
+        }
+    }
+
+    function drawTextAngle(ctx, angle, point, w, h, offsetX = 15, offsetY = 0) {
+        if(angle > 0) {
+            ctx.font = "22px Arial"; ctx.fillStyle = "yellow";
+            ctx.fillText(`${angle}°`, point.x * w + offsetX, point.y * h + offsetY);
+        }
+    }
+
+    function setupPose(pose) { pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 }); }
     const poseLateral = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); setupPose(poseLateral);
     const poseFrontal = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); setupPose(poseFrontal);
 
@@ -188,22 +139,27 @@
             const lm = results.poseLandmarks;
             const w = canvasLateral.width, h = canvasLateral.height;
             
-            drawFaceMask(ctxLateral, lm, w, h);
-            drawCustomConnections(ctxLateral, lm, w, h);
-            
-            // Dibujar marcadores blancos simulados
-            drawLandmarks(ctxLateral, lm, {color: '#ffffff', lineWidth: 1, radius: 4});
+            drawGeometricFace(ctxLateral, lm, w, h);
+            drawBodyConnections(ctxLateral, lm, w, h);
+            drawMarkers(ctxLateral, lm, w, h);
 
-            const hombro = lm[12], cadera = lm[24], rodilla = lm[26], tobillo = lm[28], pie = lm[32];
+            // Índices lado derecho para perfil sagital
+            const hombro = lm[12], codo = lm[14], muñeca = lm[16];
+            const cadera = lm[24], rodilla = lm[26], tobillo = lm[28], pie = lm[32];
             
+            // Cálculos
+            currentAngles.hombroLat = calcAngle(cadera, hombro, codo);
+            currentAngles.codoLat = calcAngle(hombro, codo, muñeca);
             currentAngles.cadera = calcAngle(hombro, cadera, rodilla);
             currentAngles.rodillaLat = calcAngle(cadera, rodilla, tobillo);
             currentAngles.tobillo = calcAngle(rodilla, tobillo, pie);
 
-            ctxLateral.font = "24px Arial"; ctxLateral.fillStyle = "yellow"; ctxLateral.lineWidth = 2;
-            if(currentAngles.cadera > 0) ctxLateral.fillText(`${currentAngles.cadera}°`, cadera.x * w + 15, cadera.y * h);
-            if(currentAngles.rodillaLat > 0) ctxLateral.fillText(`${currentAngles.rodillaLat}°`, rodilla.x * w + 15, rodilla.y * h);
-            if(currentAngles.tobillo > 0) ctxLateral.fillText(`${currentAngles.tobillo}°`, tobillo.x * w + 15, tobillo.y * h);
+            // Dibujar solo números en articulaciones
+            drawTextAngle(ctxLateral, currentAngles.hombroLat, hombro, w, h);
+            drawTextAngle(ctxLateral, currentAngles.codoLat, codo, w, h);
+            drawTextAngle(ctxLateral, currentAngles.cadera, cadera, w, h);
+            drawTextAngle(ctxLateral, currentAngles.rodillaLat, rodilla, w, h);
+            drawTextAngle(ctxLateral, currentAngles.tobillo, tobillo, w, h);
         }
     });
 
@@ -215,23 +171,35 @@
             const lm = results.poseLandmarks;
             const w = canvasFrontal.width, h = canvasFrontal.height;
 
-            drawFaceMask(ctxFrontal, lm, w, h);
-            drawCustomConnections(ctxFrontal, lm, w, h);
-            drawLandmarks(ctxFrontal, lm, {color: '#ffffff', lineWidth: 1, radius: 4});
+            drawGeometricFace(ctxFrontal, lm, w, h);
+            drawBodyConnections(ctxFrontal, lm, w, h);
+            drawMarkers(ctxFrontal, lm, w, h);
 
+            // Puntos Izquierdos
+            const homIzq = lm[11], codIzq = lm[13], muñIzq = lm[15];
             const cadIzq = lm[23], rodIzq = lm[25], tobIzq = lm[27];
+            // Puntos Derechos
+            const homDer = lm[12], codDer = lm[14], muñDer = lm[16];
             const cadDer = lm[24], rodDer = lm[26], tobDer = lm[28];
 
+            currentAngles.hombroFIzq = calcAngle(cadIzq, homIzq, codIzq);
+            currentAngles.codoFIzq = calcAngle(homIzq, codIzq, muñIzq);
             currentAngles.valgoIzq = calcAngle(cadIzq, rodIzq, tobIzq);
+
+            currentAngles.hombroFDer = calcAngle(cadDer, homDer, codDer);
+            currentAngles.codoFDer = calcAngle(homDer, codDer, muñDer);
             currentAngles.valgoDer = calcAngle(cadDer, rodDer, tobDer);
 
-            ctxFrontal.font = "24px Arial"; ctxFrontal.fillStyle = "yellow";
-            if(currentAngles.valgoIzq > 0) ctxFrontal.fillText(`${currentAngles.valgoIzq}°`, rodIzq.x * w + 15, rodIzq.y * h);
-            if(currentAngles.valgoDer > 0) ctxFrontal.fillText(`${currentAngles.valgoDer}°`, rodDer.x * w - 45, rodDer.y * h);
+            drawTextAngle(ctxFrontal, currentAngles.hombroFIzq, homIzq, w, h);
+            drawTextAngle(ctxFrontal, currentAngles.codoFIzq, codIzq, w, h);
+            drawTextAngle(ctxFrontal, currentAngles.valgoIzq, rodIzq, w, h);
+            
+            drawTextAngle(ctxFrontal, currentAngles.hombroFDer, homDer, w, h, -45);
+            drawTextAngle(ctxFrontal, currentAngles.codoFDer, codDer, w, h, -45);
+            drawTextAngle(ctxFrontal, currentAngles.valgoDer, rodDer, w, h, -45);
         }
     });
 
-    // Bucle de video
     async function processFrames() {
         if (!videoLateral.paused || !videoFrontal.paused) {
             if(!videoLateral.paused) await poseLateral.send({image: videoLateral});
@@ -240,7 +208,6 @@
         }
     }
 
-    // Eventos de Botones
     document.getElementById('btnPlayPause').addEventListener('click', () => {
         if (videoLateral.paused || videoFrontal.paused) {
             videoLateral.play(); videoFrontal.play(); processFrames();
@@ -254,21 +221,23 @@
         
         document.getElementById('resFrontal').innerHTML = `
             <ul>
-                <li><strong>Valgo Pierna Izquierda:</strong> ${currentAngles.valgoIzq}°</li>
-                <li><strong>Valgo Pierna Derecha:</strong> ${currentAngles.valgoDer}°</li>
+                <li><strong>Hombro Izq/Der:</strong> ${currentAngles.hombroFIzq}° / ${currentAngles.hombroFDer}°</li>
+                <li><strong>Codo Izq/Der:</strong> ${currentAngles.codoFIzq}° / ${currentAngles.codoFDer}°</li>
+                <li><strong>Valgo Pierna Izq:</strong> ${currentAngles.valgoIzq}°</li>
+                <li><strong>Valgo Pierna Der:</strong> ${currentAngles.valgoDer}°</li>
             </ul>
-            <p><small>*Valores menores a 175° indican colapso medial de la rodilla.</small></p>
         `;
         document.getElementById('resSagital').innerHTML = `
             <ul>
-                <li><strong>Flexión Tronco/Cadera:</strong> ${currentAngles.cadera}°</li>
-                <li><strong>Flexión Rodilla:</strong> ${currentAngles.rodillaLat}°</li>
-                <li><strong>Dorsiflexión Tobillo:</strong> ${currentAngles.tobillo}°</li>
+                <li><strong>Hombro (Sagital):</strong> ${currentAngles.hombroLat}°</li>
+                <li><strong>Codo (Sagital):</strong> ${currentAngles.codoLat}°</li>
+                <li><strong>Cadera/Tronco:</strong> ${currentAngles.cadera}°</li>
+                <li><strong>Rodilla:</strong> ${currentAngles.rodillaLat}°</li>
+                <li><strong>Tobillo:</strong> ${currentAngles.tobillo}°</li>
             </ul>
         `;
     });
 
-    // Cargar Videos
     function setupVideo(inputId, videoEl, canvasEl) {
         document.getElementById(inputId).addEventListener('change', (e) => {
             videoEl.src = URL.createObjectURL(e.target.files[0]);
@@ -278,7 +247,6 @@
     setupVideo('uploadLateral', videoLateral, canvasLateral);
     setupVideo('uploadFrontal', videoFrontal, canvasFrontal);
 
-    // Cámaras en Vivo (Solo se puede abrir una a la vez por limitaciones del navegador)
     document.getElementById('btnCamLateral').addEventListener('click', () => {
         const cam = new Camera(videoLateral, { onFrame: async () => { await poseLateral.send({image: videoLateral}); }, width: 640, height: 480 }); cam.start();
     });
