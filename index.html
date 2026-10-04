@@ -66,8 +66,9 @@
 
     let currentAngles = { cadera: 0, rodillaLat: 0, tobillo: 0, hombroLat: 0, codoLat: 0, valgoIzq: 0, valgoDer: 0, hombroFIzq: 0, codoFIzq: 0, hombroFDer: 0, codoFDer: 0 };
 
+    // FÓRMULA CORREGIDA: Se eliminó el bloqueo de "baja confianza" para forzar el cálculo
     function calcAngle(a, b, c) {
-        if (!a || !b || !c || a.visibility < 0.5 || b.visibility < 0.5 || c.visibility < 0.5) return 0;
+        if (!a || !b || !c) return 0;
         let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
         let angle = Math.abs(radians * 180.0 / Math.PI);
         if (angle > 180.0) angle = 360.0 - angle;
@@ -75,7 +76,7 @@
     }
 
     function drawGeometricFace(ctx, lm, w, h) {
-        if(!lm[0] || lm[0].visibility < 0.5) return;
+        if(!lm[0]) return;
         const faceLines = [[0,1],[1,2],[2,3],[3,7],[7,9],[9,0], [0,4],[4,5],[5,6],[6,8],[8,10],[10,0], [9,10], [1,4], [3,9], [6,10]];
         ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5;
         faceLines.forEach(conn => {
@@ -89,26 +90,25 @@
         ctx.strokeStyle = "#00bcd4"; ctx.lineWidth = 2.5;
         bodyLines.forEach(conn => {
             const p1 = lm[conn[0]], p2 = lm[conn[1]];
-            if(p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
+            if(p1 && p2) { // Restricción visual eliminada
                 ctx.beginPath(); ctx.moveTo(p1.x * w, p1.y * h); ctx.lineTo(p2.x * w, p2.y * h); ctx.stroke();
             }
         });
     }
 
-    // AHORA DIBUJA ANILLOS HUECOS PARA DEJAR VER TUS MARCADORES NEGROS
     function drawMarkers(ctx, lm, w, h) {
         ctx.strokeStyle = "#00bcd4"; 
         ctx.lineWidth = 2;
         for (let i = 0; i < lm.length; i++) {
-            if (i <= 10 || (i >= 17 && i <= 22)) continue; // Omite cara y manos
-            if (lm[i].visibility > 0.6) {
+            if (i <= 10 || (i >= 17 && i <= 22)) continue; 
+            if (lm[i]) { // Forzar dibujo de anillos
                 ctx.beginPath(); ctx.arc(lm[i].x * w, lm[i].y * h, 6, 0, 2 * Math.PI); ctx.stroke();
             }
         }
     }
 
     function drawTextAngle(ctx, angle, point, w, h, offsetX = 15, offsetY = 0) {
-        if(angle > 0) {
+        if(angle > 0 && point) {
             ctx.font = "bold 20px Arial"; ctx.fillStyle = "yellow";
             ctx.shadowColor = "black"; ctx.shadowBlur = 4;
             ctx.fillText(`${angle}°`, point.x * w + offsetX, point.y * h + offsetY);
@@ -120,7 +120,6 @@
     const poseLateral = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseLateral.setOptions(poseOptions);
     const poseFrontal = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseFrontal.setOptions(poseOptions);
 
-    // PROCESAMIENTO SAGITAL DINÁMICO (Detecta automáticamente qué perfil estás mostrando)
     poseLateral.onResults((results) => {
         ctxLateral.clearRect(0, 0, canvasLateral.width, canvasLateral.height); 
         if (results.poseLandmarks) {
@@ -128,14 +127,14 @@
             const w = canvasLateral.width, h = canvasLateral.height;
             drawGeometricFace(ctxLateral, lm, w, h); drawBodyConnections(ctxLateral, lm, w, h); drawMarkers(ctxLateral, lm, w, h);
             
-            // Evalúa qué lado tiene mejor visibilidad
-            const visDerecha = (lm[12].visibility + lm[24].visibility + lm[26].visibility + lm[28].visibility);
-            const visIzquierda = (lm[11].visibility + lm[23].visibility + lm[25].visibility + lm[27].visibility);
+            // Evalúa de forma segura qué perfil se ve mejor
+            const visDerecha = (lm[12].visibility || 0) + (lm[24].visibility || 0) + (lm[26].visibility || 0);
+            const visIzquierda = (lm[11].visibility || 0) + (lm[23].visibility || 0) + (lm[25].visibility || 0);
             
             let hombro, codo, muñeca, cadera, rodilla, tobillo, pie;
-            if (visDerecha > visIzquierda) { // Perfil derecho
+            if (visDerecha > visIzquierda) { 
                 hombro = lm[12]; codo = lm[14]; muñeca = lm[16]; cadera = lm[24]; rodilla = lm[26]; tobillo = lm[28]; pie = lm[32];
-            } else { // Perfil izquierdo
+            } else { 
                 hombro = lm[11]; codo = lm[13]; muñeca = lm[15]; cadera = lm[23]; rodilla = lm[25]; tobillo = lm[27]; pie = lm[31];
             }
 
