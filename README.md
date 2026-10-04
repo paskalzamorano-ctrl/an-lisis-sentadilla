@@ -1,0 +1,1 @@
+Interfaz web para análisis biomecánico de la sentadilla. Requisitos: Navegador web actualizado y archivos de video MP4. Instrucciones de ejecución: Subir los videos en los selectores y usar el botón de captura de momento crítico.. 
