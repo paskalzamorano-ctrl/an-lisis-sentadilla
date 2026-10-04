@@ -1,490 +1,340 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Drop Squat | Análisis Biomecánico</title>
-
-<!-- MediaPipe Pose: modelo ligero para dispositivos móviles -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drop Squat | Análisis de movimiento</title>
 <style>
-:root {
-  --cyan: #00bcd4;
-  --yellow: #ffeb3b;
-  --bg: #0b1220;
-  --panel: #151f30;
-  --border: #28384c;
-  --text: #eaf2ff;
-  --muted: #9eb0c7;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
-}
-header {
-  padding: 22px 16px;
-  border-bottom: 1px solid var(--border);
-  background: #101a2a;
-}
-header h1 { margin: 0; font-size: 23px; }
-header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
-main { max-width: 1450px; margin: auto; padding: 18px; }
-.controls {
-  display: flex; flex-wrap: wrap; gap: 12px;
-  align-items: center; margin-bottom: 18px;
-}
-.file-control {
-  flex: 1 1 220px; padding: 12px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px; font-size: 13px;
-}
-.file-control label { display: block; margin-bottom: 8px; font-weight: 700; }
-input[type=file] { width: 100%; max-width: 100%; color: var(--muted); }
-button {
-  border: 0; border-radius: 9px; padding: 13px 18px;
-  font-weight: 750; font-size: 14px; cursor: pointer;
-  background: var(--cyan); color: #00151a;
-}
-button.secondary { background: #293950; color: white; }
-button:disabled { opacity: .45; cursor: not-allowed; }
-.video-grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-.panel {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden; min-width: 0;
-}
-.panel-heading {
-  padding: 13px 15px; border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; gap: 8px;
-  align-items: center;
-}
-.panel-heading h2 { font-size: 16px; margin: 0; }
-.status { color: var(--muted); font-size: 11px; }
-.video-stage {
-  position: relative; width: 100%; background: #02050a;
-  overflow: hidden; aspect-ratio: 16 / 9;
-}
-.video-stage video {
-  display: block; width: 100%; height: 100%;
-  object-fit: contain; background: #02050a;
-}
-.video-stage canvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%; pointer-events: none;
-}
-.video-footer {
-  padding: 9px 13px; font-size: 12px; color: var(--muted);
-  display: flex; justify-content: space-between; gap: 8px;
-}
-.results { margin-top: 20px; }
-.results h2 { font-size: 19px; margin: 0 0 12px; }
-.results-grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-.result-content { padding: 14px; }
-.result-content h3 { margin: 0 0 10px; font-size: 15px; color: var(--cyan); }
-.result-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.result-table th, .result-table td {
-  padding: 9px 6px; border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-.result-table th { color: var(--muted); font-weight: 600; }
-.result-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-.hint {
-  color: var(--muted); font-size: 12px; line-height: 1.6;
-  margin-top: 14px;
-}
-#message {
-  padding: 10px 13px; border-radius: 8px; margin-bottom: 15px;
-  background: #142a36; color: #8eeafa; font-size: 13px;
-}
-@media (max-width: 760px) {
-  main { padding: 10px; }
-  .video-grid, .results-grid { grid-template-columns: 1fr; }
-  header h1 { font-size: 20px; }
-  .controls button { flex: 1 1 100%; }
-}
+:root{--bg:#0b1220;--panel:#151f30;--line:#2b3b50;--cyan:#00bcd4;--yellow:#ffeb3b;--text:#eef5ff;--muted:#a9bad0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:20px 16px;background:#101a2a;border-bottom:1px solid var(--line)}
+header h1{font-size:clamp(20px,4vw,28px);margin:0}
+header p{color:var(--muted);margin:6px 0 0}
+main{max-width:1400px;margin:auto;padding:16px}
+.toolbar{display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;margin-bottom:14px}
+.filebox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;flex:1 1 230px;min-width:0}
+.filebox label{display:block;font-weight:700;margin-bottom:7px}
+input[type=file]{width:100%;font-size:12px;color:var(--muted)}
+button{border:0;border-radius:9px;padding:12px 16px;font-weight:750;font-size:14px;cursor:pointer;background:var(--cyan);color:#002027;align-self:center}
+button.secondary{background:#2a3a50;color:var(--text)}
+button:disabled{opacity:.45;cursor:not-allowed}
+#status{background:#142a36;color:#a3eff8;padding:10px 12px;border-radius:8px;margin-bottom:16px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.panel{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.panelhead{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+.panelhead h2{font-size:16px;margin:0}
+.small{font-size:12px;color:var(--muted)}
+.stage{position:relative;background:#02050a;width:100%;aspect-ratio:16/9;overflow:hidden}
+.stage video{display:block;width:100%;height:100%;object-fit:contain;background:#02050a}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.foot{padding:9px 12px;display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.results{margin-top:20px}
+.results h2{font-size:20px;margin:0 0 12px}
+.resultbody{padding:12px}
+.resultbody h3{color:var(--cyan);font-size:15px;margin:0 0 10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{text-align:left;padding:8px 5px;border-bottom:1px solid var(--line)}
+th{color:var(--muted)}
+td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:12px;margin-top:14px;line-height:1.6}
+@media(max-width:760px){main{padding:10px}.grid{grid-template-columns:1fr}.toolbar button{flex:1 1 100%}}
 </style>
 </head>
-
 <body>
 <header>
-  <h1>Drop Squat — Análisis biomecánico</h1>
-  <p>Seguimiento de landmarks, medición angular y captura de resultados en dos planos.</p>
+  <h1>Drop Squat · Análisis de movimiento</h1>
+  <p>Videos nativos, seguimiento de articulaciones y mediciones angulares en tiempo real.</p>
 </header>
-
 <main>
-  <div class="controls">
-    <div class="file-control">
-      <label for="frontalFile">📹 Video frontal</label>
-      <input id="frontalFile" type="file" accept="video/*">
+  <div class="toolbar">
+    <div class="filebox">
+      <label for="fileF">Video del plano frontal</label>
+      <input id="fileF" type="file" accept="video/*">
     </div>
-    <div class="file-control">
-      <label for="sagittalFile">📹 Video sagital</label>
-      <input id="sagittalFile" type="file" accept="video/*">
+    <div class="filebox">
+      <label for="fileS">Video del plano sagital</label>
+      <input id="fileS" type="file" accept="video/*">
     </div>
-    <button id="playBtn" disabled>▶ Reproducir / Pausar Ambos</button>
-    <button id="captureBtn" disabled>📸 Capturar Resultados</button>
+    <button id="toggle" class="secondary" disabled>▶ Reproducir ambos</button>
+    <button id="capture" disabled>📸 Capturar resultados</button>
   </div>
+  <div id="status" role="status">Carga ambos videos. Se recomienda MP4 con códec H.264.</div>
 
-  <div id="message" role="status">Carga los dos videos para comenzar.</div>
-
-  <section class="video-grid">
+  <section class="grid">
     <article class="panel">
-      <div class="panel-heading">
+      <div class="panelhead">
         <h2>Plano frontal</h2>
-        <span class="status" id="frontalStatus">Esperando video</span>
+        <span id="statusF" class="small">Sin video</span>
       </div>
-      <div class="video-stage" id="frontalStage">
-        <video id="frontalVideo" playsinline preload="metadata"></video>
-        <canvas id="frontalCanvas"></canvas>
+      <div class="stage" id="stageF">
+        <video id="videoF" playsinline preload="metadata"></video>
+        <canvas id="canvasF"></canvas>
       </div>
-      <div class="video-footer">
-        <span>Esqueleto y anillos cian</span>
-        <span id="frontalTime">00:00.00</span>
+      <div class="foot">
+        <span>Esqueleto y ángulos en vivo</span>
+        <span id="timeF">00:00.00</span>
       </div>
     </article>
 
     <article class="panel">
-      <div class="panel-heading">
+      <div class="panelhead">
         <h2>Plano sagital</h2>
-        <span class="status" id="sagittalStatus">Esperando video</span>
+        <span id="statusS" class="small">Sin video</span>
       </div>
-      <div class="video-stage" id="sagittalStage">
-        <video id="sagittalVideo" playsinline preload="metadata"></video>
-        <canvas id="sagittalCanvas"></canvas>
+      <div class="stage" id="stageS">
+        <video id="videoS" playsinline preload="metadata"></video>
+        <canvas id="canvasS"></canvas>
       </div>
-      <div class="video-footer">
-        <span>Perfil automático</span>
-        <span id="sagittalTime">00:00.00</span>
+      <div class="foot">
+        <span>Selección automática del perfil</span>
+        <span id="timeS">00:00.00</span>
       </div>
     </article>
   </section>
 
   <section class="results">
-    <h2>📊 Resultados capturados</h2>
-    <div class="results-grid">
-      <article class="panel result-content">
+    <h2>Resultados de la captura</h2>
+    <div class="grid">
+      <article class="panel resultbody">
         <h3>Plano frontal</h3>
-        <div id="frontalResults">Aún no hay resultados capturados.</div>
+        <div id="resultF">Pulsa «Capturar resultados» para guardar los valores del fotograma pausado.</div>
       </article>
-      <article class="panel result-content">
+      <article class="panel resultbody">
         <h3>Plano sagital</h3>
-        <div id="sagittalResults">Aún no hay resultados capturados.</div>
+        <div id="resultS">Pulsa «Capturar resultados» para guardar los valores del fotograma pausado.</div>
       </article>
     </div>
-    <p class="hint">
-      Los valores se expresan en grados. Las mediciones dependen de la calidad de
-      la detección, de la perspectiva y de la colocación del sujeto. La estimación
-      2D no sustituye una evaluación biomecánica validada.
+    <p class="note">
+      Los anillos cian son huecos para permitir ver los marcadores físicos.
+      Los ángulos se estiman a partir de landmarks 2D de MediaPipe y no de
+      la detección directa del marcador negro. La visibilidad baja no oculta
+      el texto, pero puede reducir mucho la precisión. El valgo y la
+      dorsiflexión mostrados son aproximaciones 2D, no mediciones clínicas validadas.
     </p>
   </section>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
 <script>
-"use strict";
-
-const CYAN = "#00bcd4";
-const YELLOW = "#ffeb3b";
-const WHITE = "#ffffff";
+(() => {
+'use strict';
 
 const $ = id => document.getElementById(id);
+const CYAN = '#00bcd4';
+const YELLOW = '#ffeb3b';
 
-const views = {
-  frontal: {
-    video: $("frontalVideo"),
-    canvas: $("frontalCanvas"),
-    stage: $("frontalStage"),
-    file: $("frontalFile"),
-    status: $("frontalStatus"),
-    time: $("frontalTime"),
-    results: $("frontalResults"),
-    pose: null,
-    landmarks: null,
-    angles: {},
-    busy: false,
-    lastTime: -1,
-    raf: null,
-    objectURL: null
-  },
-  sagittal: {
-    video: $("sagittalVideo"),
-    canvas: $("sagittalCanvas"),
-    stage: $("sagittalStage"),
-    file: $("sagittalFile"),
-    status: $("sagittalStatus"),
-    time: $("sagittalTime"),
-    results: $("sagittalResults"),
-    pose: null,
-    landmarks: null,
-    angles: {},
-    busy: false,
-    lastTime: -1,
-    raf: null,
-    objectURL: null
-  }
+const VIEWS = {
+  frontal: makeView('F', 'frontal'),
+  sagittal: makeView('S', 'sagittal')
 };
 
-const fmt = n => Number.isFinite(n) ? `${n.toFixed(1)}°` : "N/D";
-
-function setMessage(text) {
-  $("message").textContent = text;
+function makeView(suffix, name) {
+  return {
+    name,
+    video: $('video' + suffix),
+    canvas: $('canvas' + suffix),
+    stage: $('stage' + suffix),
+    file: $('file' + suffix),
+    status: $('status' + suffix),
+    time: $('time' + suffix),
+    results: $('result' + suffix),
+    pose: null,
+    landmarks: null,
+    angles: {},
+    url: null,
+    busy: false,
+    pending: null,
+    raf: 0,
+    lastSubmittedTime: -1
+  };
 }
 
-function formatTime(seconds) {
-  if (!Number.isFinite(seconds)) return "00:00.00";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, "0")}:${s.toFixed(2).padStart(5, "0")}`;
+function message(text) {
+  $('status').textContent = text;
 }
 
-/* ------------------------------------------------------------------
-   GEOMETRÍA Y ÁNGULOS
-   Se usan las coordenadas normalizadas x/y de MediaPipe.
-   No se filtran landmarks por visibility: se intenta calcular siempre.
------------------------------------------------------------------- */
+function timeText(t) {
+  if (!Number.isFinite(t)) return '00:00.00';
+  const m = Math.floor(t / 60);
+  const s = t % 60;
+  return String(m).padStart(2, '0') + ':' +
+    s.toFixed(2).padStart(5, '0');
+}
 
-function angleAt(a, b, c) {
+function p(lm, id) {
+  const q = lm && lm[id];
+  return q && Number.isFinite(q.x) && Number.isFinite(q.y) ? q : null;
+}
+
+function angle(a, b, c) {
   if (!a || !b || !c) return NaN;
 
-  const v1x = a.x - b.x;
-  const v1y = a.y - b.y;
-  const v2x = c.x - b.x;
-  const v2y = c.y - b.y;
+  const ux = a.x - b.x;
+  const uy = a.y - b.y;
+  const vx = c.x - b.x;
+  const vy = c.y - b.y;
 
-  const n1 = Math.hypot(v1x, v1y);
-  const n2 = Math.hypot(v2x, v2y);
+  const nu = Math.hypot(ux, uy);
+  const nv = Math.hypot(vx, vy);
 
-  if (!Number.isFinite(n1 + n2) || n1 < 1e-8 || n2 < 1e-8) {
-    return NaN;
-  }
+  if (nu < 1e-8 || nv < 1e-8) return NaN;
 
-  const cosine = Math.max(-1, Math.min(1,
-    (v1x * v2x + v1y * v2y) / (n1 * n2)
+  const cos = Math.max(-1, Math.min(1,
+    (ux * vx + uy * vy) / (nu * nv)
   ));
 
-  // Ángulo interno estricto entre 0° y 180°.
-  return Math.acos(cosine) * 180 / Math.PI;
+  return Math.acos(cos) * 180 / Math.PI;
 }
 
-function point(landmarks, index) {
-  const p = landmarks?.[index];
-  // No se rechaza por visibility o presence.
-  return p && Number.isFinite(p.x) && Number.isFinite(p.y) ? p : null;
+function fmt(v) {
+  return Number.isFinite(v) ? v.toFixed(1) + '°' : 'N/D';
 }
 
-function midPoint(a, b) {
-  if (!a || !b) return null;
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+function visScore(lm, ids) {
+  return ids.reduce((s, i) =>
+    s + (Number.isFinite(lm[i]?.visibility) ? lm[i].visibility : 0), 0
+  );
 }
 
-function calculateFrontal(lm) {
-  const p = i => point(lm, i);
-  const result = {};
+function frontalAngles(lm) {
+  const a = {};
 
-  // MediaPipe Pose: hombros 11/12, codos 13/14,
-  // muñecas 15/16, caderas 23/24, rodillas 25/26,
-  // tobillos 27/28.
-  result["Hombro izquierdo"] = angleAt(p(13), p(11), p(23));
-  result["Hombro derecho"] = angleAt(p(14), p(12), p(24));
+  a['Hombro izquierdo'] = angle(p(lm, 13), p(lm, 11), p(lm, 23));
+  a['Hombro derecho'] = angle(p(lm, 14), p(lm, 12), p(lm, 24));
+  a['Codo izquierdo'] = angle(p(lm, 11), p(lm, 13), p(lm, 15));
+  a['Codo derecho'] = angle(p(lm, 12), p(lm, 14), p(lm, 16));
 
-  result["Codo izquierdo"] = angleAt(p(11), p(13), p(15));
-  result["Codo derecho"] = angleAt(p(12), p(14), p(16));
+  const kl = angle(p(lm, 23), p(lm, 25), p(lm, 27));
+  const kr = angle(p(lm, 24), p(lm, 26), p(lm, 28));
 
-  /*
-   * Proxy de alineación frontal:
-   * ángulo interno cadera-rodilla-tobillo.
-   * Desviación respecto a 180° = 180° - ángulo interno.
-   * No es un valgo anatómico validado: la perspectiva y rotación
-   * pueden alterar el resultado. Se muestran ambas magnitudes.
-   */
-  const kneeL = angleAt(p(23), p(25), p(27));
-  const kneeR = angleAt(p(24), p(26), p(28));
+  a['Ángulo interno rodilla izquierda'] = kl;
+  a['Ángulo interno rodilla derecha'] = kr;
+  a['Desviación frontal izquierda (proxy)'] =
+    Number.isFinite(kl) ? 180 - kl : NaN;
+  a['Desviación frontal derecha (proxy)'] =
+    Number.isFinite(kr) ? 180 - kr : NaN;
 
-  result["Rodilla izquierda (interno)"] = kneeL;
-  result["Rodilla derecha (interno)"] = kneeR;
-  result["Desviación frontal izq. (proxy)"] =
-    Number.isFinite(kneeL) ? 180 - kneeL : NaN;
-  result["Desviación frontal der. (proxy)"] =
-    Number.isFinite(kneeR) ? 180 - kneeR : NaN;
-
-  return result;
+  return a;
 }
 
-function calculateSagittal(lm) {
-  const p = i => point(lm, i);
+function sagittalAngles(lm) {
+  const left = [11, 13, 15, 23, 25, 27, 29, 31];
+  const right = [12, 14, 16, 24, 26, 28, 30, 32];
+  const side = visScore(lm, right) >= visScore(lm, left)
+    ? 'derecho' : 'izquierdo';
 
-  /*
-   * Perfil automático: compara la suma de visibility de hombro,
-   * codo, muñeca, cadera, rodilla y tobillo en ambos lados.
-   * La elección es una heurística, no una garantía de orientación.
-   */
-  const leftIds = [11, 13, 15, 23, 25, 27];
-  const rightIds = [12, 14, 16, 24, 26, 28];
+  const id = side === 'derecho'
+    ? {sh:12, el:14, wr:16, hip:24, knee:26, ankle:28, heel:30, foot:32}
+    : {sh:11, el:13, wr:15, hip:23, knee:25, ankle:27, heel:29, foot:31};
 
-  const score = ids => ids.reduce((sum, id) => {
-    const v = lm?.[id]?.visibility;
-    return sum + (Number.isFinite(v) ? v : 0);
-  }, 0);
+  const sh = p(lm, id.sh);
+  const el = p(lm, id.el);
+  const wr = p(lm, id.wr);
+  const hip = p(lm, id.hip);
+  const knee = p(lm, id.knee);
+  const ankle = p(lm, id.ankle);
+  const foot = p(lm, id.foot) || p(lm, id.heel);
 
-  const side = score(rightIds) >= score(leftIds) ? "derecho" : "izquierdo";
-  const ids = side === "derecho"
-    ? { shoulder: 12, elbow: 14, wrist: 16, hip: 24, knee: 26, ankle: 28, heel: 30, foot: 32 }
-    : { shoulder: 11, elbow: 13, wrist: 15, hip: 23, knee: 25, ankle: 27, heel: 29, foot: 31 };
+  const hipInternal = angle(sh, hip, knee);
+  const ankleInternal = angle(knee, ankle, foot);
 
-  const shoulder = p(ids.shoulder);
-  const elbow = p(ids.elbow);
-  const wrist = p(ids.wrist);
-  const hip = p(ids.hip);
-  const knee = p(ids.knee);
-  const ankle = p(ids.ankle);
-  const heel = p(ids.heel);
-  const foot = p(ids.foot);
-
-  const result = { "Perfil detectado": side };
-
-  // Ángulo de cadera hombro-cadera-rodilla.
-  // La flexión de tronco se estima respecto de la vertical corporal.
-  const hipInternal = angleAt(shoulder, hip, knee);
-  result["Cadera (interno)"] = hipInternal;
-  result["Flexión de tronco (estimación)"] =
-    Number.isFinite(hipInternal) ? Math.abs(180 - hipInternal) : NaN;
-
-  result["Flexión de rodilla"] = angleAt(hip, knee, ankle);
-
-  // Dorsiflexión aproximada: ángulo entre pierna y pie.
-  // El pie se representa con heel -> foot_index.
-  const footPoint = foot || heel;
-  const ankleFoot = angleAt(knee, ankle, footPoint);
-  result["Tobillo (interno)"] = ankleFoot;
-  result["Dorsiflexión (proxy 2D)"] =
-    Number.isFinite(ankleFoot) ? Math.abs(90 - ankleFoot) : NaN;
-
-  result["Hombro"] = angleAt(elbow, shoulder, hip);
-  result["Codo"] = angleAt(shoulder, elbow, wrist);
-
-  result._ids = ids;
-  return result;
+  return {
+    'Perfil elegido': side,
+    'Flexión de tronco (estimación)':
+      Number.isFinite(hipInternal) ? 180 - hipInternal : NaN,
+    'Ángulo interno de cadera': hipInternal,
+    'Flexión de rodilla': angle(hip, knee, ankle),
+    'Ángulo interno de tobillo': ankleInternal,
+    'Dorsiflexión (proxy 2D)':
+      Number.isFinite(ankleInternal) ? Math.abs(90 - ankleInternal) : NaN,
+    'Hombro': angle(el, sh, hip),
+    'Codo': angle(sh, el, wr),
+    _ids: id
+  };
 }
 
-/* ------------------------------------------------------------------
-   DIBUJO SOBRE CANVAS TRANSPARENTE
------------------------------------------------------------------- */
+const connections = [
+  [11,12], [11,13], [13,15], [12,14], [14,16],
+  [11,23], [12,24], [23,24], [23,25], [25,27],
+  [24,26], [26,28], [27,29], [29,31], [28,30],
+  [30,32], [27,31], [28,32]
+];
 
-function resizeCanvas(view) {
-  const video = view.video;
-  if (!video.videoWidth || !video.videoHeight) return;
-
-  // El canvas usa las dimensiones nativas del video para mantener
-  // las coordenadas normalizadas alineadas con la imagen.
-  view.canvas.width = video.videoWidth;
-  view.canvas.height = video.videoHeight;
-
-  view.stage.style.aspectRatio =
-    `${video.videoWidth} / ${video.videoHeight}`;
-
-  if (view.landmarks) drawOverlay(view);
-}
-
-function drawLine(ctx, a, b, width = 2.5, color = CYAN) {
+function drawLine(ctx, a, b) {
   if (!a || !b) return;
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
   ctx.lineTo(b.x, b.y);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.lineCap = "round";
-  ctx.stroke();
-}
-
-function drawRing(ctx, p, radius = 7) {
-  if (!p) return;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
   ctx.strokeStyle = CYAN;
   ctx.lineWidth = 2.5;
-  // Sin relleno: permite ver el marcador físico negro.
+  ctx.lineCap = 'round';
   ctx.stroke();
 }
 
-function drawLabel(ctx, p, text, dx = 9, dy = -10) {
-  if (!p) return;
+function ring(ctx, q, r = 7) {
+  if (!q) return;
+  ctx.beginPath();
+  ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = CYAN;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+}
 
-  const x = p.x + dx;
-  const y = p.y + dy;
+function label(ctx, q, text, dx = 8, dy = -10) {
+  if (!q) return;
 
   ctx.save();
-  ctx.font = "bold 17px Arial, sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.lineJoin = "round";
-  ctx.shadowColor = "#000000";
+  ctx.font = 'bold 15px Arial,sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = '#000';
   ctx.shadowBlur = 5;
-  ctx.shadowOffsetX = 1;
-  ctx.shadowOffsetY = 2;
   ctx.lineWidth = 4;
-  ctx.strokeStyle = "#000000";
-  ctx.strokeText(text, x, y);
+  ctx.strokeStyle = '#000';
+  ctx.strokeText(text, q.x + dx, q.y + dy);
   ctx.fillStyle = YELLOW;
-  ctx.fillText(text, x, y);
+  ctx.fillText(text, q.x + dx, q.y + dy);
   ctx.restore();
 }
 
-const BODY_CONNECTIONS = [
-  [11,12],
-  [11,13],[13,15],
-  [12,14],[14,16],
-  [11,23],[12,24],[23,24],
-  [23,25],[25,27],
-  [24,26],[26,28],
-  [27,29],[29,31],
-  [28,30],[30,32],
-  [27,31],[28,32]
-];
-
-function drawFaceMask(ctx, lm, w, h) {
-  // Máscara geométrica simplificada. No dibuja puntos faciales.
-  const p = i => point(lm, i);
-  const chains = [
-    [7, 2, 0, 5, 8],
-    [2, 1, 0, 4, 5],
-    [9, 0, 10]
-  ];
+function drawFace(ctx, lm, w, h) {
+  const chains = [[7,2,0,5,8], [2,1,0,4,5], [9,0,10]];
 
   ctx.save();
   ctx.strokeStyle = CYAN;
-  ctx.lineWidth = 1.8;
-  ctx.globalAlpha = 0.85;
-  ctx.lineCap = "round";
+  ctx.lineWidth = 1.6;
+  ctx.globalAlpha = .85;
 
   for (const chain of chains) {
     ctx.beginPath();
-    let started = false;
+    let begun = false;
+
     for (const id of chain) {
-      const q = p(id);
-      if (!q) { started = false; continue; }
-      if (!started) {
+      const q = p(lm, id);
+      if (!q) {
+        begun = false;
+        continue;
+      }
+
+      if (!begun) {
         ctx.moveTo(q.x * w, q.y * h);
-        started = true;
+        begun = true;
       } else {
         ctx.lineTo(q.x * w, q.y * h);
       }
     }
+
     ctx.stroke();
   }
+
   ctx.restore();
 }
 
-function drawOverlay(view) {
-  const ctx = view.canvas.getContext("2d");
+function draw(view) {
+  const ctx = view.canvas.getContext('2d');
   const w = view.canvas.width;
   const h = view.canvas.height;
   const lm = view.landmarks;
@@ -492,127 +342,169 @@ function drawOverlay(view) {
   ctx.clearRect(0, 0, w, h);
   if (!lm) return;
 
-  const p = i => {
-    const q = point(lm, i);
-    return q ? { x: q.x * w, y: q.y * h } : null;
+  const xy = i => {
+    const q = p(lm, i);
+    return q ? {x: q.x * w, y: q.y * h} : null;
   };
 
-  // Esqueleto corporal, sin conexiones de manos ni puntos faciales.
-  for (const [a, b] of BODY_CONNECTIONS) {
-    drawLine(ctx, p(a), p(b));
+  for (const [a, b] of connections) {
+    drawLine(ctx, xy(a), xy(b));
   }
 
-  drawFaceMask(ctx, lm, w, h);
+  drawFace(ctx, lm, w, h);
 
-  const joints = view === views.frontal
+  const joints = view.name === 'frontal'
     ? [11,12,13,14,15,16,23,24,25,26,27,28]
     : [11,12,13,14,15,16,23,24,25,26,27,28,29,30,31,32];
 
-  for (const id of joints) drawRing(ctx, p(id), 7);
+  joints.forEach(i => ring(ctx, xy(i)));
 
-  // Ángulos en tiempo real junto a la articulación correspondiente.
-  if (view === views.frontal) {
-    const a = view.angles;
-    drawLabel(ctx, p(11), `Hombro izq: ${fmt(a["Hombro izquierdo"])}`, 10, -22);
-    drawLabel(ctx, p(12), `Hombro der: ${fmt(a["Hombro derecho"])}`, 10, -22);
-    drawLabel(ctx, p(13), `Codo izq: ${fmt(a["Codo izquierdo"])}`, 10, -6);
-    drawLabel(ctx, p(14), `Codo der: ${fmt(a["Codo derecho"])}`, 10, -6);
-    drawLabel(ctx, p(25), `Rodilla izq: ${fmt(a["Rodilla izquierda (interno)"])}`, 10, 0);
-    drawLabel(ctx, p(26), `Rodilla der: ${fmt(a["Rodilla derecha (interno)"])}`, 10, 0);
+  const a = view.angles;
+
+  if (view.name === 'frontal') {
+    label(ctx, xy(11), 'Hombro izq: ' + fmt(a['Hombro izquierdo']), 8, -20);
+    label(ctx, xy(12), 'Hombro der: ' + fmt(a['Hombro derecho']), 8, -20);
+    label(ctx, xy(13), 'Codo izq: ' + fmt(a['Codo izquierdo']), 8, -8);
+    label(ctx, xy(14), 'Codo der: ' + fmt(a['Codo derecho']), 8, -8);
+    label(ctx, xy(25), 'Rodilla izq: ' + fmt(a['Ángulo interno rodilla izquierda']), 8, 2);
+    label(ctx, xy(26), 'Rodilla der: ' + fmt(a['Ángulo interno rodilla derecha']), 8, 2);
   } else {
-    const a = view.angles;
-    const ids = a._ids || {};
-    const side = a["Perfil detectado"] || "—";
-    drawLabel(ctx, p(ids.hip), `Tronco: ${fmt(a["Flexión de tronco (estimación)"])}`, 10, -22);
-    drawLabel(ctx, p(ids.knee), `Rodilla: ${fmt(a["Flexión de rodilla"])}`, 10, 0);
-    drawLabel(ctx, p(ids.ankle), `Tobillo: ${fmt(a["Dorsiflexión (proxy 2D)"])}`, 10, 0);
-    drawLabel(ctx, p(ids.shoulder), `Hombro: ${fmt(a["Hombro"])}`, 10, -22);
-    drawLabel(ctx, p(ids.elbow), `Codo: ${fmt(a["Codo"])}`, 10, 0);
+    const id = a._ids || {};
+
+    label(ctx, xy(id.hip), 'Tronco: ' + fmt(a['Flexión de tronco (estimación)']), 8, -20);
+    label(ctx, xy(id.knee), 'Rodilla: ' + fmt(a['Flexión de rodilla']), 8, 2);
+    label(ctx, xy(id.ankle), 'Tobillo: ' + fmt(a['Dorsiflexión (proxy 2D)']), 8, 2);
+    label(ctx, xy(id.sh), 'Hombro: ' + fmt(a['Hombro']), 8, -20);
+    label(ctx, xy(id.el), 'Codo: ' + fmt(a['Codo']), 8, 2);
+
     ctx.save();
-    ctx.font = "bold 15px Arial";
+    ctx.font = 'bold 15px Arial';
     ctx.fillStyle = YELLOW;
-    ctx.shadowColor = "#000";
+    ctx.shadowColor = '#000';
     ctx.shadowBlur = 5;
-    ctx.fillText(`Perfil: ${side}`, 12, 24);
+    ctx.fillText('Perfil: ' + (a['Perfil elegido'] || '—'), 12, 22);
     ctx.restore();
   }
 }
 
-/* ------------------------------------------------------------------
-   RESULTADOS DE MEDIAPIPE
------------------------------------------------------------------- */
+function resize(view) {
+  if (!view.video.videoWidth || !view.video.videoHeight) return;
 
-function onPoseResults(view, results) {
-  if (!results.poseLandmarks) {
-    view.status.textContent = "Sin landmarks detectados";
-    return;
+  view.canvas.width = view.video.videoWidth;
+  view.canvas.height = view.video.videoHeight;
+  view.stage.style.aspectRatio =
+    view.video.videoWidth + '/' + view.video.videoHeight;
+
+  draw(view);
+}
+
+function poseResults(view, res) {
+  view.landmarks = res.poseLandmarks || null;
+
+  if (view.landmarks) {
+    view.angles = view.name === 'frontal'
+      ? frontalAngles(view.landmarks)
+      : sagittalAngles(view.landmarks);
+  } else {
+    view.angles = {};
   }
 
-  view.landmarks = results.poseLandmarks;
+  view.status.textContent = view.landmarks
+    ? 'Seguimiento activo'
+    : 'Landmarks no detectados';
 
-  view.angles = view === views.frontal
-    ? calculateFrontal(view.landmarks)
-    : calculateSagittal(view.landmarks);
+  draw(view);
 
-  view.status.textContent = "Seguimiento activo";
-  drawOverlay(view);
+  if (view.pending) {
+    const done = view.pending;
+    view.pending = null;
+    done();
+  }
 }
 
 async function initPose(view) {
-  if (typeof Pose === "undefined") {
-    throw new Error("No se pudo cargar MediaPipe Pose. Revisa tu conexión.");
+  if (typeof Pose === 'undefined') {
+    throw new Error('No cargó MediaPipe. Revisa Internet y vuelve a cargar la página.');
   }
 
   view.pose = new Pose({
     locateFile: file =>
-      `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+      'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/' + file
   });
 
   view.pose.setOptions({
     modelComplexity: 0,
     smoothLandmarks: true,
     enableSegmentation: false,
-    smoothSegmentation: false,
-    minDetectionConfidence: 0.35,
-    minTrackingConfidence: 0.35
+    minDetectionConfidence: .35,
+    minTrackingConfidence: .35
   });
 
-  view.pose.onResults(results => onPoseResults(view, results));
+  view.pose.onResults(res => poseResults(view, res));
 }
 
-/*
- * La reproducción nunca se dibuja en canvas.
- * El video nativo conserva su reproducción fluida; MediaPipe recibe
- * frames de forma asíncrona y el canvas solo dibuja la superposición.
- */
-async function processFrame(view) {
+async function infer(view) {
   if (!view.pose || view.busy ||
-      view.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-    return;
-  }
+      view.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
 
   view.busy = true;
+
   try {
-    await view.pose.send({ image: view.video });
-  } catch (error) {
-    console.error("Error de inferencia:", error);
-    view.status.textContent = "Error de análisis";
+    await view.pose.send({image: view.video});
+  } catch (e) {
+    console.error(e);
+    view.status.textContent = 'Error de análisis';
   } finally {
     view.busy = false;
   }
 }
 
-function startAnalysisLoop(view) {
+async function inferAndWait(view) {
+  if (!view.pose ||
+      view.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+
+  while (view.busy) {
+    await new Promise(r => setTimeout(r, 8));
+  }
+
+  view.busy = true;
+
+  try {
+    await new Promise(async (resolve, reject) => {
+      let settled = false;
+
+      const finish = () => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+
+      view.pending = finish;
+
+      try {
+        await view.pose.send({image: view.video});
+        setTimeout(finish, 1200);
+      } catch (e) {
+        view.pending = null;
+        reject(e);
+      }
+    });
+  } finally {
+    view.busy = false;
+  }
+}
+
+function loop(view) {
   if (view.raf) cancelAnimationFrame(view.raf);
 
-  const tick = async () => {
-    view.time.textContent = formatTime(view.video.currentTime);
+  const tick = () => {
+    view.time.textContent = timeText(view.video.currentTime);
 
     if (!view.video.paused && !view.video.ended &&
-        view.video.currentTime !== view.lastTime) {
-      view.lastTime = view.video.currentTime;
-      // No se bloquea el siguiente frame de animación esperando inferencia.
-      processFrame(view);
+        view.video.currentTime !== view.lastSubmittedTime && !view.busy) {
+      view.lastSubmittedTime = view.video.currentTime;
+      infer(view);
     }
 
     view.raf = requestAnimationFrame(tick);
@@ -621,146 +513,137 @@ function startAnalysisLoop(view) {
   view.raf = requestAnimationFrame(tick);
 }
 
-/* ------------------------------------------------------------------
-   CARGA DE ARCHIVOS
------------------------------------------------------------------- */
+function updateButtons() {
+  const ready = Object.values(VIEWS).every(v =>
+    v.video.readyState >= 1 && v.pose
+  );
 
-for (const [name, view] of Object.entries(views)) {
-  view.file.addEventListener("change", async event => {
-    const file = event.target.files?.[0];
+  $('toggle').disabled = !ready;
+  $('capture').disabled = !ready;
+}
+
+for (const view of Object.values(VIEWS)) {
+  view.file.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
     if (!file) return;
 
     view.video.pause();
 
-    if (view.objectURL) URL.revokeObjectURL(view.objectURL);
-    view.objectURL = URL.createObjectURL(file);
-    view.video.src = view.objectURL;
-    view.video.load();
+    if (view.url) URL.revokeObjectURL(view.url);
 
+    view.url = URL.createObjectURL(file);
+    view.video.src = view.url;
+    view.video.load();
     view.landmarks = null;
     view.angles = {};
-    view.lastTime = -1;
+    view.lastSubmittedTime = -1;
 
     view.video.onloadedmetadata = async () => {
-      resizeCanvas(view);
-      view.status.textContent = "Video cargado";
+      resize(view);
+      view.status.textContent = 'Inicializando…';
 
       try {
         if (!view.pose) await initPose(view);
-        startAnalysisLoop(view);
-        setMessage("Video cargado. Puedes reproducir ambos o capturar un fotograma.");
+        loop(view);
+        await inferAndWait(view);
+        message('Video cargado. Carga el otro plano para habilitar los controles.');
       } catch (err) {
         console.error(err);
-        setMessage(err.message || "No se pudo inicializar MediaPipe.");
+        message(err.message || 'No se pudo iniciar el análisis.');
       }
 
-      updateControls();
+      updateButtons();
     };
 
-    view.video.onerror = () => {
-      setMessage(`No se pudo abrir el video ${name}. Prueba con MP4/H.264.`);
-    };
+    view.video.onerror = () =>
+      message('No se pudo abrir el video. Prueba un MP4/H.264 compatible con el navegador.');
   });
 
-  view.video.addEventListener("loadedmetadata", () => resizeCanvas(view));
-  view.video.addEventListener("seeked", () => {
-    view.lastTime = -1;
-    processFrame(view);
+  view.video.addEventListener('loadedmetadata', () => resize(view));
+
+  view.video.addEventListener('seeked', () => {
+    view.lastSubmittedTime = -1;
+    if (view.video.paused) infer(view);
   });
 }
 
-function updateControls() {
-  const ready = views.frontal.video.readyState >= 1 &&
-                views.sagittal.video.readyState >= 1;
-  $("playBtn").disabled = !ready;
-  $("captureBtn").disabled = !ready;
-}
-
-/* ------------------------------------------------------------------
-   REPRODUCCIÓN SINCRONIZADA POR CONTROL
------------------------------------------------------------------- */
-
-$("playBtn").addEventListener("click", async () => {
-  const videos = [views.frontal.video, views.sagittal.video];
-  const shouldPlay = videos.some(v => v.paused);
+$('toggle').addEventListener('click', async () => {
+  const videos = Object.values(VIEWS).map(v => v.video);
+  const shouldPlay = videos.some(v => v.paused || v.ended);
 
   if (shouldPlay) {
+    if (videos.some(v => v.ended)) {
+      videos.forEach(v => { v.currentTime = 0; });
+    }
+
     try {
       await Promise.all(videos.map(v => v.play()));
-      $("playBtn").textContent = "⏸ Pausar Ambos";
-      setMessage("Reproducción activa en ambos videos.");
-    } catch (err) {
-      setMessage("El navegador bloqueó la reproducción. Intenta pulsar el botón otra vez.");
-      console.error(err);
+      $('toggle').textContent = '⏸ Pausar ambos';
+      message('Ambos videos están reproduciéndose.');
+    } catch (e) {
+      message('El navegador no pudo iniciar ambos videos. Pulsa reproducir nuevamente.');
+      console.error(e);
     }
   } else {
     videos.forEach(v => v.pause());
-    $("playBtn").textContent = "▶ Reproducir / Pausar Ambos";
-    setMessage("Ambos videos están pausados.");
+    $('toggle').textContent = '▶ Reproducir ambos';
+    message('Ambos videos están pausados. El esqueleto queda sobre el fotograma detenido.');
   }
 });
 
-/* ------------------------------------------------------------------
-   CAPTURA DE RESULTADOS
-   Pausa ambos videos e intenta procesar el frame detenido antes de
-   imprimir los valores disponibles.
------------------------------------------------------------------- */
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
 
-function makeTable(angles, excluded = []) {
+function table(angles) {
   const rows = Object.entries(angles)
-    .filter(([key]) => !key.startsWith("_") && !excluded.includes(key))
-    .map(([key, value]) => {
-      const display = typeof value === "number" ? fmt(value) : String(value);
-      return `<tr><td>${escapeHTML(key)}</td><td>${escapeHTML(display)}</td></tr>`;
-    }).join("");
+    .filter(([k]) => !k.startsWith('_'))
+    .map(([k, v]) => {
+      const value = typeof v === 'number' ? fmt(v) : String(v);
+      return '<tr><td>' + escapeHTML(k) + '</td><td>' +
+        escapeHTML(value) + '</td></tr>';
+    }).join('');
 
-  return `<table class="result-table">
-    <thead><tr><th>Medición</th><th>Valor</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="2">Sin datos disponibles</td></tr>'}</tbody>
-  </table>`;
+  return '<table><thead><tr><th>Medición</th><th>Valor</th></tr></thead><tbody>' +
+    (rows || '<tr><td colspan="2">No hay datos detectados para este fotograma.</td></tr>') +
+    '</tbody></table>';
 }
 
-function escapeHTML(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;",
-    '"': "&quot;", "'": "&#39;"
-  })[char]);
-}
+$('capture').addEventListener('click', async () => {
+  const all = Object.values(VIEWS);
 
-$("captureBtn").addEventListener("click", async () => {
-  const all = [views.frontal, views.sagittal];
+  all.forEach(v => v.video.pause());
+  $('toggle').textContent = '▶ Reproducir ambos';
+  message('Videos pausados. Analizando los fotogramas detenidos…');
 
-  all.forEach(view => view.video.pause());
-  $("playBtn").textContent = "▶ Reproducir / Pausar Ambos";
-  setMessage("Videos pausados. Procesando los fotogramas detenidos…");
+  try {
+    await Promise.all(all.map(inferAndWait));
 
-  // Espera a que las inferencias que ya estaban en curso terminen.
-  await Promise.all(all.map(async view => {
-    while (view.busy) {
-      await new Promise(resolve => setTimeout(resolve, 10));
-    }
-    await processFrame(view);
-  }));
+    await new Promise(r =>
+      requestAnimationFrame(() => requestAnimationFrame(r))
+    );
 
-  // Permite que onResults actualice los landmarks antes de mostrar datos.
-  await new Promise(resolve => requestAnimationFrame(resolve));
+    VIEWS.frontal.results.innerHTML = table(VIEWS.frontal.angles);
+    VIEWS.sagittal.results.innerHTML = table(VIEWS.sagittal.angles);
 
-  const frontal = views.frontal.angles;
-  const sagittal = views.sagittal.angles;
-
-  views.frontal.results.innerHTML = makeTable(frontal);
-  views.sagittal.results.innerHTML = makeTable(sagittal);
-
-  setMessage(
-    `Captura realizada — Frontal: ${formatTime(views.frontal.video.currentTime)} | ` +
-    `Sagital: ${formatTime(views.sagittal.video.currentTime)}. ` +
-    `Los videos permanecen pausados.`
-  );
+    message('Resultados capturados. Los dos videos permanecen pausados.');
+  } catch (e) {
+    console.error(e);
+    message('No se pudo completar la captura. Revisa que ambos videos estén cargados.');
+  }
 });
 
-window.addEventListener("resize", () => {
-  Object.values(views).forEach(resizeCanvas);
-});
+window.addEventListener('resize', () =>
+  Object.values(VIEWS).forEach(resize)
+);
+
+})();
 </script>
 </body>
 </html>
