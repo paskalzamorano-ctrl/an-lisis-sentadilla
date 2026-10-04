@@ -19,7 +19,6 @@
         .video-container { display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 1200px; flex-wrap: wrap; }
         .view-box { position: relative; width: 48%; min-width: 300px; background-color: #000; border: 2px solid #00bcd4; border-radius: 8px; overflow: hidden; aspect-ratio: 9/16; }
         
-        /* El video y el lienzo van empalmados, pero el lienzo es transparente */
         video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
         
@@ -40,7 +39,6 @@
     <div class="video-container">
         <div class="view-box">
             <h3 class="title-overlay">Plano Sagital</h3>
-            <!-- Videos nativos que corren fluidos -->
             <video id="videoLateral" loop playsinline muted></video>
             <canvas id="canvasLateral"></canvas>
         </div>
@@ -54,8 +52,7 @@
     <div class="analysis-panel" id="analysisText">
         <div class="result-section">
             <h3 style="color: #00bcd4;">Resultados: Plano Frontal</h3>
-            <!-- Texto inicial limpio, sin datos hasta que se apriete capturar -->
-            <p id="resFrontal">Esperando captura... Pon play, pausa en el momento crítico de la sentadilla y presiona el botón rosa.</p>
+            <p id="resFrontal">Esperando captura... Pon play, pausa en el momento crítico y presiona el botón rosa.</p>
         </div>
         <div class="result-section">
             <h3 style="color: #00bcd4;">Resultados: Plano Sagital</h3>
@@ -74,7 +71,6 @@
 
     let currentAngles = { cadera: 0, rodillaLat: 0, tobillo: 0, hombroLat: 0, codoLat: 0, valgoIzq: 0, valgoDer: 0, hombroFIzq: 0, codoFIzq: 0, hombroFDer: 0, codoFDer: 0 };
 
-    // Fórmula matemática corregida para ángulos internos estrictos (0-180)
     function calcAngle(a, b, c) {
         if (!a || !b || !c || a.visibility < 0.5 || b.visibility < 0.5 || c.visibility < 0.5) return 0;
         let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -83,7 +79,6 @@
         return Math.round(angle);
     }
 
-    // Máscara geométrica facial limpia
     function drawGeometricFace(ctx, lm, w, h) {
         if(!lm[0] || lm[0].visibility < 0.5) return;
         const faceLines = [
@@ -101,7 +96,6 @@
         });
     }
 
-    // Conexiones del cuerpo (omitiendo manos y cara)
     function drawBodyConnections(ctx, lm, w, h) {
         const bodyConnections = [
             [11,12], [11,23], [12,24], [23,24], 
@@ -119,19 +113,17 @@
         });
     }
 
-    // Dibujar marcadores (Puntos blancos limpios)
     function drawMarkers(ctx, lm, w, h) {
         ctx.fillStyle = "#ffffff";
         for (let i = 0; i < lm.length; i++) {
-            if (i <= 10) continue; // No dibuja puntos en la cara
-            if (i >= 17 && i <= 22) continue; // No dibuja puntos en las manos
+            if (i <= 10) continue; 
+            if (i >= 17 && i <= 22) continue; 
             if (lm[i].visibility > 0.6) {
                 ctx.beginPath(); ctx.arc(lm[i].x * w, lm[i].y * h, 4, 0, 2 * Math.PI); ctx.fill();
             }
         }
     }
 
-    // Imprimir texto de ángulos
     function drawTextAngle(ctx, angle, point, w, h, offsetX = 15, offsetY = 0) {
         if(angle > 0) {
             ctx.font = "bold 20px Arial"; 
@@ -139,35 +131,28 @@
             ctx.shadowColor = "black";
             ctx.shadowBlur = 4;
             ctx.fillText(`${angle}°`, point.x * w + offsetX, point.y * h + offsetY);
-            ctx.shadowBlur = 0; // Reset
+            ctx.shadowBlur = 0; 
         }
     }
 
-    // Configuración de MediaPipe
     const poseOptions = { modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 };
     const poseLateral = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseLateral.setOptions(poseOptions);
     const poseFrontal = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseFrontal.setOptions(poseOptions);
 
-    // DIBUJO LATERAL (Fondo transparente)
     poseLateral.onResults((results) => {
-        ctxLateral.clearRect(0, 0, canvasLateral.width, canvasLateral.height); // Solo limpia, NO dibuja el video pegado
+        ctxLateral.clearRect(0, 0, canvasLateral.width, canvasLateral.height); 
         if (results.poseLandmarks) {
             const lm = results.poseLandmarks;
             const w = canvasLateral.width, h = canvasLateral.height;
-            
             drawGeometricFace(ctxLateral, lm, w, h);
             drawBodyConnections(ctxLateral, lm, w, h);
             drawMarkers(ctxLateral, lm, w, h);
-
-            const hombro = lm[12], codo = lm[14], muñeca = lm[16];
-            const cadera = lm[24], rodilla = lm[26], tobillo = lm[28], pie = lm[32];
-            
+            const hombro = lm[12], codo = lm[14], muñeca = lm[16], cadera = lm[24], rodilla = lm[26], tobillo = lm[28], pie = lm[32];
             currentAngles.hombroLat = calcAngle(cadera, hombro, codo);
             currentAngles.codoLat = calcAngle(hombro, codo, muñeca);
             currentAngles.cadera = calcAngle(hombro, cadera, rodilla);
             currentAngles.rodillaLat = calcAngle(cadera, rodilla, tobillo);
             currentAngles.tobillo = calcAngle(rodilla, tobillo, pie);
-
             drawTextAngle(ctxLateral, currentAngles.hombroLat, hombro, w, h);
             drawTextAngle(ctxLateral, currentAngles.codoLat, codo, w, h);
             drawTextAngle(ctxLateral, currentAngles.cadera, cadera, w, h);
@@ -176,56 +161,64 @@
         }
     });
 
-    // DIBUJO FRONTAL (Fondo transparente)
     poseFrontal.onResults((results) => {
         ctxFrontal.clearRect(0, 0, canvasFrontal.width, canvasFrontal.height);
         if (results.poseLandmarks) {
             const lm = results.poseLandmarks;
             const w = canvasFrontal.width, h = canvasFrontal.height;
-
             drawGeometricFace(ctxFrontal, lm, w, h);
             drawBodyConnections(ctxFrontal, lm, w, h);
             drawMarkers(ctxFrontal, lm, w, h);
-
-            const homIzq = lm[11], codIzq = lm[13], muñIzq = lm[15];
-            const cadIzq = lm[23], rodIzq = lm[25], tobIzq = lm[27];
-            const homDer = lm[12], codDer = lm[14], muñDer = lm[16];
-            const cadDer = lm[24], rodDer = lm[26], tobDer = lm[28];
-
+            const homIzq = lm[11], codIzq = lm[13], muñIzq = lm[15], cadIzq = lm[23], rodIzq = lm[25], tobIzq = lm[27];
+            const homDer = lm[12], codDer = lm[14], muñDer = lm[16], cadDer = lm[24], rodDer = lm[26], tobDer = lm[28];
             currentAngles.hombroFIzq = calcAngle(cadIzq, homIzq, codIzq);
             currentAngles.codoFIzq = calcAngle(homIzq, codIzq, muñIzq);
             currentAngles.valgoIzq = calcAngle(cadIzq, rodIzq, tobIzq);
-
             currentAngles.hombroFDer = calcAngle(cadDer, homDer, codDer);
             currentAngles.codoFDer = calcAngle(homDer, codDer, muñDer);
             currentAngles.valgoDer = calcAngle(cadDer, rodDer, tobDer);
-
             drawTextAngle(ctxFrontal, currentAngles.hombroFIzq, homIzq, w, h);
             drawTextAngle(ctxFrontal, currentAngles.codoFIzq, codIzq, w, h);
             drawTextAngle(ctxFrontal, currentAngles.valgoIzq, rodIzq, w, h);
-            
             drawTextAngle(ctxFrontal, currentAngles.hombroFDer, homDer, w, h, -45);
             drawTextAngle(ctxFrontal, currentAngles.codoFDer, codDer, w, h, -45);
             drawTextAngle(ctxFrontal, currentAngles.valgoDer, rodDer, w, h, -45);
         }
     });
 
-    // SISTEMA ASÍNCRONO DE VIDEO FLUIDO
-    function onPlayLateral() {
-        if (videoLateral.paused || videoLateral.ended) return;
-        poseLateral.send({image: videoLateral}).then(() => requestAnimationFrame(onPlayLateral));
-    }
-    function onPlayFrontal() {
-        if (videoFrontal.paused || videoFrontal.ended) return;
-        poseFrontal.send({image: videoFrontal}).then(() => requestAnimationFrame(onPlayFrontal));
+    // NUEVO MOTOR DE FLUIDEZ: La IA trabaja en paralelo sin trabar el video
+    let isProcessingLat = false;
+    let lastTimeLat = -1;
+    function processLateral() {
+        if (!videoLateral.paused && !videoLateral.ended) {
+            if (!isProcessingLat && videoLateral.currentTime !== lastTimeLat) {
+                isProcessingLat = true;
+                lastTimeLat = videoLateral.currentTime;
+                poseLateral.send({image: videoLateral}).then(() => { isProcessingLat = false; }).catch(() => { isProcessingLat = false; });
+            }
+            requestAnimationFrame(processLateral);
+        }
     }
 
-    videoLateral.addEventListener('play', onPlayLateral);
-    videoFrontal.addEventListener('play', onPlayFrontal);
+    let isProcessingFront = false;
+    let lastTimeFront = -1;
+    function processFrontal() {
+        if (!videoFrontal.paused && !videoFrontal.ended) {
+            if (!isProcessingFront && videoFrontal.currentTime !== lastTimeFront) {
+                isProcessingFront = true;
+                lastTimeFront = videoFrontal.currentTime;
+                poseFrontal.send({image: videoFrontal}).then(() => { isProcessingFront = false; }).catch(() => { isProcessingFront = false; });
+            }
+            requestAnimationFrame(processFrontal);
+        }
+    }
 
-    // BOTÓN DE REPRODUCIR / PAUSAR SEGURO
+    // El video avisa cuando empieza a reproducirse para iniciar la IA de fondo
+    videoLateral.addEventListener('play', () => { requestAnimationFrame(processLateral); });
+    videoFrontal.addEventListener('play', () => { requestAnimationFrame(processFrontal); });
+
     document.getElementById('btnPlayPause').addEventListener('click', () => {
-        if (videoLateral.paused && videoFrontal.paused) {
+        if (videoLateral.paused || videoFrontal.paused) {
             videoLateral.play(); 
             videoFrontal.play();
         } else {
@@ -234,7 +227,6 @@
         }
     });
 
-    // BOTÓN DE CAPTURA (Solo aquí aparecen los datos en el texto)
     document.getElementById('btnCapture').addEventListener('click', () => {
         videoLateral.pause(); 
         videoFrontal.pause();
@@ -258,7 +250,6 @@
         `;
     });
 
-    // Carga correcta de videos adaptando el tamaño del lienzo
     function setupVideo(inputId, videoEl, canvasEl) {
         document.getElementById(inputId).addEventListener('change', (e) => {
             const file = e.target.files[0];
