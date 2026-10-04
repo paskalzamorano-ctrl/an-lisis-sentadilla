@@ -135,7 +135,8 @@
         }
     }
 
-    const poseOptions = { modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 };
+    // AQUI ESTÁ EL CAMBIO CLAVE PARA CELULARES: modelComplexity: 0 en lugar de 1
+    const poseOptions = { modelComplexity: 0, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 };
     const poseLateral = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseLateral.setOptions(poseOptions);
     const poseFrontal = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`}); poseFrontal.setOptions(poseOptions);
 
@@ -186,7 +187,6 @@
         }
     });
 
-    // NUEVO MOTOR DE FLUIDEZ: La IA trabaja en paralelo sin trabar el video
     let isProcessingLat = false;
     let lastTimeLat = -1;
     function processLateral() {
@@ -213,7 +213,6 @@
         }
     }
 
-    // El video avisa cuando empieza a reproducirse para iniciar la IA de fondo
     videoLateral.addEventListener('play', () => { requestAnimationFrame(processLateral); });
     videoFrontal.addEventListener('play', () => { requestAnimationFrame(processFrontal); });
 
