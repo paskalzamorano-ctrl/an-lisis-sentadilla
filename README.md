@@ -1,4 +1,4 @@
-Análisis Biomecánico - Sentadilla
+*Análisis Biomecánico - Sentadilla*
 
 Esta es una interfaz web desarrollada para el análisis biomecánico de la sentadilla evaluando variables cuantitativas en el plano sagital y frontal simultáneamente. 
 
