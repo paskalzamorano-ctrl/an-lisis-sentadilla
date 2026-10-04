@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Biomecánico - Sentadilla</title>
+    <!-- Librerías de MediaPipe (IA) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header { text-align: center; margin-bottom: 20px; }
+        .controls {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button, input[type="file"] {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #45a049; }
+        .btn-capture { background-color: #e91e63; }
+        .btn-capture:hover { background-color: #c2185b; }
+        
+        .video-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .view-box {
+            position: relative;
+            width: 50%;
+            background-color: #000;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 9/16; /* Ideal para videos grabados con celular en vertical */
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .analysis-panel {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 1160px;
+        }
+        .data-text { font-size: 1.1em; line-height: 1.6; }
+        .highlight { color: #4CAF50; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Análisis Bioinstrumental - Sentadilla (Drop & Valgo)</h1>
+        <p>Sube tus videos para análisis simultáneo o usa la cámara para tiempo real.</p>
+    </div>
+
+    <div class="controls">
+        <div>
+            <label>Video Lateral (Sagital): </label>
+            <input type="file" id="uploadLateral" accept="video/*">
+        </div>
+        <div>
+            <label>Video Frontal: </label>
+            <input type="file" id="uploadFrontal" accept="video/*">
+        </div>
+        <button id="btnPlayPause">Reproducir / Pausar Ambos</button>
+        <button class="btn-capture" id="btnCapture">📸 Capturar Momento Crítico</button>
+        <button id="btnCamera" style="background-color: #2196F3;">Activar Cámara en Vivo</button>
+    </div>
+
+    <div class="video-container">
+        <!-- Plano Lateral -->
+        <div class="view-box">
+            <h3 style="position: absolute; top: 10px; left: 10px; z-index: 10; margin:0; text-shadow: 2px 2px 4px #000;">Plano Sagital</h3>
+            <video id="videoLateral" loop playsinline muted></video>
+            <canvas id="canvasLateral"></canvas>
+        </div>
+        <!-- Plano Frontal -->
+        <div class="view-box">
+            <h3 style="position: absolute; top: 10px; left: 10px; z-index: 10; margin:0; text-shadow: 2px 2px 4px #000;">Plano Frontal</h3>
+            <video id="videoFrontal" loop playsinline muted></video>
+            <canvas id="canvasFrontal"></canvas>
+        </div>
+    </div>
+
+    <div class="analysis-panel">
+        <h2>📊 Análisis de Variables Cuantitativas</h2>
+        <div class="data-text" id="analysisText">
+            Esperando captura de datos... Reproduce los videos, pausa en el punto más bajo de la sentadilla y presiona "Capturar Momento Crítico".
+        </div>
+    </div>
+
+<script>
+    // Referencias al DOM
+    const videoLateral = document.getElementById('videoLateral');
+    const canvasLateral = document.getElementById('canvasLateral');
+    const ctxLateral = canvasLateral.getContext('2d');
+    
+    const videoFrontal = document.getElementById('videoFrontal');
+    const canvasFrontal = document.getElementById('canvasFrontal');
+    const ctxFrontal = canvasFrontal.getContext('2d');
+
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnCapture = document.getElementById('btnCapture');
+    const analysisText = document.getElementById('analysisText');
+
+    let isPlaying = false;
+    let currentAngles = { tronco: 0, rodillaLateral: 0, valgoDer: 0, valgoIzq: 0 };
+
+    // Función para calcular el ángulo entre 3 puntos (en grados)
+    function calculateAngle(a, b, c) {
+        let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+        let angle = Math.abs(radians * 180.0 / Math.PI);
+        if (angle > 180.0) angle = 360.0 - angle;
+        return Math.round(angle);
+    }
+
+    // Configuración de MediaPipe Pose
+    function setupPoseConfig(poseObj) {
+        poseObj.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+    }
+
+    const poseLateral = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    setupPoseConfig(poseLateral);
+    const poseFrontal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    setupPoseConfig(poseFrontal);
+
+    // Procesamiento del Plano Lateral (Calcula Flexión de Rodilla e Inclinación)
+    poseLateral.onResults((results) => {
+        ctxLateral.save();
+        ctxLateral.clearRect(0, 0, canvasLateral.width, canvasLateral.height);
+        ctxLateral.drawImage(results.image, 0, 0, canvasLateral.width, canvasLateral.height);
+        
+        if (results.poseLandmarks) {
+            drawConnectors(ctxLateral, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+            drawLandmarks(ctxLateral, results.poseLandmarks, {color: '#FF0000', lineWidth: 1, radius: 3});
+            
+            // Índices MediaPipe: Hombro(11/12), Cadera(23/24), Rodilla(25/26), Tobillo(27/28)
+            // Asumimos vista de perfil derecho (índices pares)
+            const hombro = results.poseLandmarks[12];
+            const cadera = results.poseLandmarks[24];
+            const rodilla = results.poseLandmarks[26];
+            const tobillo = results.poseLandmarks[28];
+            
+            // Ángulo Rodilla
+            currentAngles.rodillaLateral = calculateAngle(cadera, rodilla, tobillo);
+            
+            // Dibujar texto del ángulo en el canvas
+            ctxLateral.font = "20px Arial";
+            ctxLateral.fillStyle = "yellow";
+            ctxLateral.fillText(`Rodilla: ${currentAngles.rodillaLateral}°`, rodilla.x * canvasLateral.width, rodilla.y * canvasLateral.height);
+        }
+        ctxLateral.restore();
+    });
+
+    // Procesamiento del Plano Frontal (Calcula Valgo de Rodillas)
+    poseFrontal.onResults((results) => {
+        ctxFrontal.save();
+        ctxFrontal.clearRect(0, 0, canvasFrontal.width, canvasFrontal.height);
+        ctxFrontal.drawImage(results.image, 0, 0, canvasFrontal.width, canvasFrontal.height);
+        
+        if (results.poseLandmarks) {
+            drawConnectors(ctxFrontal, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+            drawLandmarks(ctxFrontal, results.poseLandmarks, {color: '#FF0000', lineWidth: 1, radius: 3});
+            
+            const caderaDer = results.poseLandmarks[24], caderaIzq = results.poseLandmarks[23];
+            const rodillaDer = results.poseLandmarks[26], rodillaIzq = results.poseLandmarks[25];
+            const tobilloDer = results.poseLandmarks[28], tobilloIzq = results.poseLandmarks[27];
+
+            currentAngles.valgoDer = calculateAngle(caderaDer, rodillaDer, tobilloDer);
+            currentAngles.valgoIzq = calculateAngle(caderaIzq, rodillaIzq, tobilloIzq);
+
+            ctxFrontal.font = "20px Arial";
+            ctxFrontal.fillStyle = "yellow";
+            ctxFrontal.fillText(`${currentAngles.valgoIzq}°`, rodillaIzq.x * canvasFrontal.width, rodillaIzq.y * canvasFrontal.height);
+            ctxFrontal.fillText(`${currentAngles.valgoDer}°`, rodillaDer.x * canvasFrontal.width, rodillaDer.y * canvasFrontal.height);
+        }
+        ctxFrontal.restore();
+    });
+
+    // Bucle de renderizado para videos
+    async function processVideoFrames() {
+        if (!videoLateral.paused && !videoFrontal.paused) {
+            await poseLateral.send({image: videoLateral});
+            await poseFrontal.send({image: videoFrontal});
+            requestAnimationFrame(processVideoFrames);
+        }
+    }
+
+    // Controles de Video
+    btnPlayPause.addEventListener('click', () => {
+        if (videoLateral.paused || videoFrontal.paused) {
+            videoLateral.play();
+            videoFrontal.play();
+            isPlaying = true;
+            processVideoFrames();
+        } else {
+            videoLateral.pause();
+            videoFrontal.pause();
+            isPlaying = false;
+        }
+    });
+
+    // Carga de Archivos
+    document.getElementById('uploadLateral').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        videoLateral.src = URL.createObjectURL(file);
+        videoLateral.onloadedmetadata = () => {
+            canvasLateral.width = videoLateral.videoWidth;
+            canvasLateral.height = videoLateral.videoHeight;
+        };
+    });
+
+    document.getElementById('uploadFrontal').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        videoFrontal.src = URL.createObjectURL(file);
+        videoFrontal.onloadedmetadata = () => {
+            canvasFrontal.width = videoFrontal.videoWidth;
+            canvasFrontal.height = videoFrontal.videoHeight;
+        };
+    });
+
+    // Captura de datos
+    btnCapture.addEventListener('click', () => {
+        videoLateral.pause();
+        videoFrontal.pause();
+        
+        analysisText.innerHTML = `
+            <strong>Resultados en el punto crítico capturado:</strong><br><br>
+            <ul>
+                <li><span class="highlight">Ángulo de Flexión de Rodilla (Lateral):</span> ${currentAngles.rodillaLateral}° (Evalúa profundidad de la sentadilla).</li>
+                <li><span class="highlight">Alineación Pierna Izquierda (Frontal):</span> ${currentAngles.valgoIzq}°</li>
+                <li><span class="highlight">Alineación Pierna Derecha (Frontal):</span> ${currentAngles.valgoDer}°</li>
+            </ul>
+            <p><strong>Interpretación:</strong> En el plano frontal, ángulos menores a 170°-175° durante el ascenso pueden ser indicativos de un valgo dinámico de rodilla, lo que sugiere posible debilidad en la musculatura abductora de la cadera.</p>
+        `;
+    });
+
+    // Modo Cámara en Vivo (Para Frontal)
+    document.getElementById('btnCamera').addEventListener('click', () => {
+        const camera = new Camera(videoFrontal, {
+            onFrame: async () => {
+                await poseFrontal.send({image: videoFrontal});
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+        alert("Cámara activada en el panel de Plano Frontal para corrección en vivo.");
+    });
+</script>
+</body>
+</html>
