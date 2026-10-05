@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador de Sentadilla</title>
+    <title>Analizador de Sentadilla Biomecánico</title>
     <!-- Carga de MediaPipe (Versión estable fija) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
     
@@ -165,13 +165,19 @@
 
         .results-col h3 {
             color: var(--primary);
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .results-col p {
-            margin: 5px 0;
+            margin: 8px 0;
             font-size: 1.1rem;
             font-weight: 500;
+        }
+        
+        .side-indicator {
+            font-size: 0.9rem;
+            color: #6b7280;
+            font-weight: normal;
         }
 
         @media (min-width: 768px) {
@@ -186,7 +192,7 @@
 <body>
 
     <div class="container">
-        <h1>Analizador de Sentadilla</h1>
+        <h1>Analizador Biomecánico de Sentadilla</h1>
 
         <div class="upload-section">
             <div class="upload-box">
@@ -213,29 +219,28 @@
         </div>
 
         <div class="controls">
-            <!-- Los botones inician deshabilitados unos 2 segundos de forma silenciosa mientras carga la IA -->
             <button id="btn-play" disabled>▶ Reproducir / ⏸ Pausar</button>
             <button id="btn-capture" disabled>📸 Capturar momento crítico</button>
         </div>
 
         <div id="results-section">
-            <h2>Análisis del momento crítico</h2>
+            <h2>Análisis Biomecánico del Momento Crítico</h2>
             <div class="results-grid">
                 <div class="results-col">
-                    <h3>PLANO SAGITAL</h3>
-                    <p>Hombro: <span id="res-sag-hombro">--°</span></p>
-                    <p>Codo: <span id="res-sag-codo">--°</span></p>
-                    <p>Cadera: <span id="res-sag-cadera">--°</span></p>
-                    <p>Rodilla: <span id="res-sag-rodilla">--°</span></p>
-                    <p>Tobillo: <span id="res-sag-tobillo">--°</span></p>
+                    <h3>PLANO SAGITAL <span id="res-sag-side" class="side-indicator"></span></h3>
+                    <p>Ángulo de Hombro: <span id="res-sag-hombro">--°</span></p>
+                    <p>Flexión de Codo: <span id="res-sag-codo">--°</span></p>
+                    <p>Flexión de Tronco / Cadera: <span id="res-sag-cadera">--°</span></p>
+                    <p>Flexión de Rodilla: <span id="res-sag-rodilla">--°</span></p>
+                    <p>Dorsiflexión de Tobillo: <span id="res-sag-tobillo">--°</span></p>
                 </div>
                 <div class="results-col">
-                    <h3>PLANO FRONTAL</h3>
-                    <p>Hombro: <span id="res-front-hombro">--°</span></p>
-                    <p>Codo: <span id="res-front-codo">--°</span></p>
-                    <p>Cadera: <span id="res-front-cadera">--°</span></p>
-                    <p>Rodilla: <span id="res-front-rodilla">--°</span></p>
-                    <p>Tobillo: <span id="res-front-tobillo">--°</span></p>
+                    <h3>PLANO FRONTAL <span class="side-indicator">(Der / Izq)</span></h3>
+                    <p>Alineación Hombros: <span id="res-front-hombro">--° / --°</span></p>
+                    <p>Alineación Codos: <span id="res-front-codo">--° / --°</span></p>
+                    <p>Alineación Pélvica: <span id="res-front-cadera">--° / --°</span></p>
+                    <p>Valgo/Varo de Rodillas: <span id="res-front-rodilla">--° / --°</span></p>
+                    <p>Alineación Tobillos: <span id="res-front-tobillo">--° / --°</span></p>
                 </div>
             </div>
         </div>
@@ -257,7 +262,7 @@
         let animationFrameId = null;
         
         const currentData = {
-            sagittal: { hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' },
+            sagittal: { side: '', hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' },
             frontal: { hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' }
         };
 
@@ -268,10 +273,9 @@
             l_hi: 23, r_hi: 24, // Caderas
             l_kn: 25, r_kn: 26, // Rodillas
             l_an: 27, r_an: 28, // Tobillos
-            l_ft: 31, r_ft: 32  // Puntas del pie (Índice del pie)
+            l_ft: 31, r_ft: 32  // Puntas del pie
         };
 
-        // Función matemática para garantizar siempre un ángulo interno positivo (0° a 180°)
         function calculateAngle(p1, p2, p3) {
             if (!p1 || !p2 || !p3 || p1.visibility < 0.4 || p2.visibility < 0.4 || p3.visibility < 0.4) return null;
             let radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x);
@@ -334,11 +338,10 @@
             const ang_el = calculateAngle(lm[p_sh], lm[p_el], lm[p_wr]);
             const ang_hi = calculateAngle(lm[p_sh], lm[p_hi], lm[p_kn]);
             const ang_kn = calculateAngle(lm[p_hi], lm[p_kn], lm[p_an]);
-            
-            // El ángulo del tobillo se calcula entre la rodilla, el tobillo y la punta del pie.
-            // Al estar de pie empieza cerca de los 90° y al hacer la sentadilla baja a medida que la rodilla avanza.
             const ang_an = calculateAngle(lm[p_kn], lm[p_an], lm[p_ft]);
 
+            // Guardamos qué perfil estamos analizando
+            currentData.sagittal.side = isLeft ? '(Perfil Izquierdo)' : '(Perfil Derecho)';
             currentData.sagittal.hombro = ang_sh ?? '--';
             currentData.sagittal.codo = ang_el ?? '--';
             currentData.sagittal.cadera = ang_hi ?? '--';
@@ -372,23 +375,30 @@
             const w = canvasFront.width;
             const h = canvasFront.height;
 
-            const calcAvg = (l_ang, r_ang) => {
-                if (l_ang !== null && r_ang !== null) return Math.round((l_ang + r_ang) / 2);
-                return l_ang || r_ang || null;
-            };
+            // Calculamos lados independientes (Der / Izq)
+            const l_sh = calculateAngle(lm[L.l_hi], lm[L.l_sh], lm[L.l_el]);
+            const r_sh = calculateAngle(lm[L.r_hi], lm[L.r_sh], lm[L.r_el]);
+            
+            const l_el = calculateAngle(lm[L.l_sh], lm[L.l_el], lm[L.l_wr]);
+            const r_el = calculateAngle(lm[L.r_sh], lm[L.r_el], lm[L.r_wr]);
+            
+            const l_hi = calculateAngle(lm[L.l_sh], lm[L.l_hi], lm[L.l_kn]);
+            const r_hi = calculateAngle(lm[L.r_sh], lm[L.r_hi], lm[L.r_kn]);
+            
+            const l_kn = calculateAngle(lm[L.l_hi], lm[L.l_kn], lm[L.l_an]);
+            const r_kn = calculateAngle(lm[L.r_hi], lm[L.r_kn], lm[L.r_an]);
+            
+            const l_an = calculateAngle(lm[L.l_kn], lm[L.l_an], lm[L.l_ft]);
+            const r_an = calculateAngle(lm[L.r_kn], lm[L.r_an], lm[L.r_ft]);
 
-            const ang_sh = calcAvg(calculateAngle(lm[L.l_hi], lm[L.l_sh], lm[L.l_el]), calculateAngle(lm[L.r_hi], lm[L.r_sh], lm[L.r_el]));
-            const ang_el = calcAvg(calculateAngle(lm[L.l_sh], lm[L.l_el], lm[L.l_wr]), calculateAngle(lm[L.r_sh], lm[L.r_el], lm[L.r_wr]));
-            const ang_hi = calcAvg(calculateAngle(lm[L.l_sh], lm[L.l_hi], lm[L.l_kn]), calculateAngle(lm[L.r_sh], lm[L.r_hi], lm[L.r_kn]));
-            const ang_kn = calcAvg(calculateAngle(lm[L.l_hi], lm[L.l_kn], lm[L.l_an]), calculateAngle(lm[L.r_hi], lm[L.r_kn], lm[L.r_an]));
-            const ang_an = calcAvg(calculateAngle(lm[L.l_kn], lm[L.l_an], lm[L.l_ft]), calculateAngle(lm[L.r_kn], lm[L.r_an], lm[L.r_ft]));
+            // Guardamos con formato: Derecha / Izquierda
+            currentData.frontal.hombro = `${r_sh ?? '--'}° / ${l_sh ?? '--'}°`;
+            currentData.frontal.codo = `${r_el ?? '--'}° / ${l_el ?? '--'}°`;
+            currentData.frontal.cadera = `${r_hi ?? '--'}° / ${l_hi ?? '--'}°`;
+            currentData.frontal.rodilla = `${r_kn ?? '--'}° / ${l_kn ?? '--'}°`;
+            currentData.frontal.tobillo = `${r_an ?? '--'}° / ${l_an ?? '--'}°`;
 
-            currentData.frontal.hombro = ang_sh ?? '--';
-            currentData.frontal.codo = ang_el ?? '--';
-            currentData.frontal.cadera = ang_hi ?? '--';
-            currentData.frontal.rodilla = ang_kn ?? '--';
-            currentData.frontal.tobillo = ang_an ?? '--';
-
+            // Dibujar Esqueleto Lado Izquierdo del paciente
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_el], w, h);
             drawLine(ctxFront, lm[L.l_el], lm[L.l_wr], w, h);
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_hi], w, h);
@@ -396,6 +406,7 @@
             drawLine(ctxFront, lm[L.l_kn], lm[L.l_an], w, h);
             drawLine(ctxFront, lm[L.l_an], lm[L.l_ft], w, h);
 
+            // Dibujar Esqueleto Lado Derecho del paciente
             drawLine(ctxFront, lm[L.r_sh], lm[L.r_el], w, h);
             drawLine(ctxFront, lm[L.r_el], lm[L.r_wr], w, h);
             drawLine(ctxFront, lm[L.r_sh], lm[L.r_hi], w, h);
@@ -406,19 +417,21 @@
             drawLine(ctxFront, lm[L.l_sh], lm[L.r_sh], w, h);
             drawLine(ctxFront, lm[L.l_hi], lm[L.r_hi], w, h);
 
-            drawJoint(ctxFront, lm[L.l_sh], null, w, h);
-            drawJoint(ctxFront, lm[L.l_el], null, w, h);
-            drawJoint(ctxFront, lm[L.l_hi], null, w, h);
-            drawJoint(ctxFront, lm[L.l_kn], null, w, h);
-            drawJoint(ctxFront, lm[L.l_an], null, w, h);
+            // Puntos lado izquierdo del paciente (derecha pantalla)
+            drawJoint(ctxFront, lm[L.l_sh], l_sh, w, h);
+            drawJoint(ctxFront, lm[L.l_el], l_el, w, h);
+            drawJoint(ctxFront, lm[L.l_hi], l_hi, w, h);
+            drawJoint(ctxFront, lm[L.l_kn], l_kn, w, h);
+            drawJoint(ctxFront, lm[L.l_an], l_an, w, h);
             drawJoint(ctxFront, lm[L.l_wr], null, w, h);
             drawJoint(ctxFront, lm[L.l_ft], null, w, h);
 
-            drawJoint(ctxFront, lm[L.r_sh], ang_sh, w, h);
-            drawJoint(ctxFront, lm[L.r_el], ang_el, w, h);
-            drawJoint(ctxFront, lm[L.r_hi], ang_hi, w, h);
-            drawJoint(ctxFront, lm[L.r_kn], ang_kn, w, h);
-            drawJoint(ctxFront, lm[L.r_an], ang_an, w, h);
+            // Puntos lado derecho del paciente (izquierda pantalla)
+            drawJoint(ctxFront, lm[L.r_sh], r_sh, w, h);
+            drawJoint(ctxFront, lm[L.r_el], r_el, w, h);
+            drawJoint(ctxFront, lm[L.r_hi], r_hi, w, h);
+            drawJoint(ctxFront, lm[L.r_kn], r_kn, w, h);
+            drawJoint(ctxFront, lm[L.r_an], r_an, w, h);
             drawJoint(ctxFront, lm[L.r_wr], null, w, h);
             drawJoint(ctxFront, lm[L.r_ft], null, w, h);
         }
@@ -438,12 +451,10 @@
         poseFrontal.setOptions(poseOptions);
         poseFrontal.onResults(onResultsFrontal);
 
-        // Habilitamos los botones en silencio en cuanto la IA esté lista
         Promise.all([poseSagittal.initialize(), poseFrontal.initialize()]).then(() => {
             btnPlay.disabled = false;
             btnCapture.disabled = false;
         }).catch(() => {
-            // Silencio absoluto. Si hay error de conexión no mostraremos mensajes alarmantes.
             btnPlay.disabled = false;
             btnCapture.disabled = false;
         });
@@ -465,7 +476,6 @@
             animationFrameId = requestAnimationFrame(processFrames);
         }
 
-        // Configuración de los videos y el mensaje de carga
         function setupVideo(inputId, videoId, canvasId, msgId) {
             const inputElem = document.getElementById(inputId);
             const videoElem = document.getElementById(videoId);
@@ -476,7 +486,6 @@
                 const file = e.target.files[0];
                 if (file) {
                     videoElem.src = URL.createObjectURL(file);
-                    // Mensaje de éxito al cargar
                     msgElem.innerText = '✅ Video cargado exitosamente';
                     msgElem.style.color = 'var(--success)';
                     msgElem.style.fontWeight = 'bold';
@@ -514,17 +523,23 @@
 
         btnCapture.addEventListener('click', () => {
             document.getElementById('results-section').style.display = 'block';
+            
+            // Asignación de Perfil Detectado
+            document.getElementById('res-sag-side').innerText = currentData.sagittal.side;
+
+            // Resultados Plano Sagital
             document.getElementById('res-sag-hombro').innerText = currentData.sagittal.hombro + '°';
             document.getElementById('res-sag-codo').innerText = currentData.sagittal.codo + '°';
             document.getElementById('res-sag-cadera').innerText = currentData.sagittal.cadera + '°';
             document.getElementById('res-sag-rodilla').innerText = currentData.sagittal.rodilla + '°';
             document.getElementById('res-sag-tobillo').innerText = currentData.sagittal.tobillo + '°';
             
-            document.getElementById('res-front-hombro').innerText = currentData.frontal.hombro + '°';
-            document.getElementById('res-front-codo').innerText = currentData.frontal.codo + '°';
-            document.getElementById('res-front-cadera').innerText = currentData.frontal.cadera + '°';
-            document.getElementById('res-front-rodilla').innerText = currentData.frontal.rodilla + '°';
-            document.getElementById('res-front-tobillo').innerText = currentData.frontal.tobillo + '°';
+            // Resultados Plano Frontal (Vienen con formato Der / Izq por defecto)
+            document.getElementById('res-front-hombro').innerText = currentData.frontal.hombro;
+            document.getElementById('res-front-codo').innerText = currentData.frontal.codo;
+            document.getElementById('res-front-cadera').innerText = currentData.frontal.cadera;
+            document.getElementById('res-front-rodilla').innerText = currentData.frontal.rodilla;
+            document.getElementById('res-front-tobillo').innerText = currentData.frontal.tobillo;
             
             document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
         });
