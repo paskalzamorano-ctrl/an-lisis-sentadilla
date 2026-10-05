@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador de Sentadilla Biomecánico</title>
+    <title>Analizador Biomecánico de Sentadilla</title>
     <!-- Carga de MediaPipe (Versión estable fija) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
     
@@ -294,6 +294,46 @@
             ctx.stroke();
         }
 
+        // Nueva función: Malla facial geométrica
+        function drawFaceMesh(ctx, landmarks, width, height) {
+            // Conectamos los 11 puntos faciales de MediaPipe para crear la máscara de triángulos
+            const FACE_TRIS = [
+                [0, 1], [1, 2], [2, 3], [3, 7], // Ojo izq a oreja
+                [0, 4], [4, 5], [5, 6], [6, 8], // Ojo der a oreja
+                [0, 9], [0, 10], [9, 10],       // Nariz a boca y boca
+                [9, 7], [10, 8],                // Boca a orejas
+                [1, 4],                         // Puente nariz
+                [3, 9], [6, 10],                // Mejillas exteriores
+                [2, 9], [5, 10]                 // Mejillas interiores
+            ];
+            
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#00ffff'; // Color cyan estilo tecnológico
+
+            // Dibujar las líneas de la máscara
+            FACE_TRIS.forEach(pair => {
+                const p1 = landmarks[pair[0]];
+                const p2 = landmarks[pair[1]];
+                if (p1 && p2 && p1.visibility > 0.4 && p2.visibility > 0.4) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x * width, p1.y * height);
+                    ctx.lineTo(p2.x * width, p2.y * height);
+                    ctx.stroke();
+                }
+            });
+
+            // Dibujar pequeños puntos en los nodos de la cara
+            ctx.fillStyle = '#00ffff';
+            for(let i = 0; i <= 10; i++) {
+                const p = landmarks[i];
+                if (p && p.visibility > 0.4) {
+                    ctx.beginPath();
+                    ctx.arc(p.x * width, p.y * height, 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        }
+
         function drawJoint(ctx, landmark, angleValue, width, height) {
             if (!landmark || landmark.visibility < 0.4) return;
             const x = landmark.x * width;
@@ -340,7 +380,6 @@
             const ang_kn = calculateAngle(lm[p_hi], lm[p_kn], lm[p_an]);
             const ang_an = calculateAngle(lm[p_kn], lm[p_an], lm[p_ft]);
 
-            // Guardamos qué perfil estamos analizando
             currentData.sagittal.side = isLeft ? '(Perfil Izquierdo)' : '(Perfil Derecho)';
             currentData.sagittal.hombro = ang_sh ?? '--';
             currentData.sagittal.codo = ang_el ?? '--';
@@ -350,6 +389,9 @@
 
             const w = canvasSag.width;
             const h = canvasSag.height;
+
+            // Dibujar la máscara facial en el plano sagital
+            drawFaceMesh(ctxSag, lm, w, h);
 
             drawLine(ctxSag, lm[p_sh], lm[p_el], w, h);
             drawLine(ctxSag, lm[p_el], lm[p_wr], w, h);
@@ -375,7 +417,6 @@
             const w = canvasFront.width;
             const h = canvasFront.height;
 
-            // Calculamos lados independientes (Der / Izq)
             const l_sh = calculateAngle(lm[L.l_hi], lm[L.l_sh], lm[L.l_el]);
             const r_sh = calculateAngle(lm[L.r_hi], lm[L.r_sh], lm[L.r_el]);
             
@@ -391,14 +432,15 @@
             const l_an = calculateAngle(lm[L.l_kn], lm[L.l_an], lm[L.l_ft]);
             const r_an = calculateAngle(lm[L.r_kn], lm[L.r_an], lm[L.r_ft]);
 
-            // Guardamos con formato: Derecha / Izquierda
             currentData.frontal.hombro = `${r_sh ?? '--'}° / ${l_sh ?? '--'}°`;
             currentData.frontal.codo = `${r_el ?? '--'}° / ${l_el ?? '--'}°`;
             currentData.frontal.cadera = `${r_hi ?? '--'}° / ${l_hi ?? '--'}°`;
             currentData.frontal.rodilla = `${r_kn ?? '--'}° / ${l_kn ?? '--'}°`;
             currentData.frontal.tobillo = `${r_an ?? '--'}° / ${l_an ?? '--'}°`;
 
-            // Dibujar Esqueleto Lado Izquierdo del paciente
+            // Dibujar la máscara facial en el plano frontal
+            drawFaceMesh(ctxFront, lm, w, h);
+
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_el], w, h);
             drawLine(ctxFront, lm[L.l_el], lm[L.l_wr], w, h);
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_hi], w, h);
@@ -406,7 +448,6 @@
             drawLine(ctxFront, lm[L.l_kn], lm[L.l_an], w, h);
             drawLine(ctxFront, lm[L.l_an], lm[L.l_ft], w, h);
 
-            // Dibujar Esqueleto Lado Derecho del paciente
             drawLine(ctxFront, lm[L.r_sh], lm[L.r_el], w, h);
             drawLine(ctxFront, lm[L.r_el], lm[L.r_wr], w, h);
             drawLine(ctxFront, lm[L.r_sh], lm[L.r_hi], w, h);
@@ -417,7 +458,6 @@
             drawLine(ctxFront, lm[L.l_sh], lm[L.r_sh], w, h);
             drawLine(ctxFront, lm[L.l_hi], lm[L.r_hi], w, h);
 
-            // Puntos lado izquierdo del paciente (derecha pantalla)
             drawJoint(ctxFront, lm[L.l_sh], l_sh, w, h);
             drawJoint(ctxFront, lm[L.l_el], l_el, w, h);
             drawJoint(ctxFront, lm[L.l_hi], l_hi, w, h);
@@ -426,7 +466,6 @@
             drawJoint(ctxFront, lm[L.l_wr], null, w, h);
             drawJoint(ctxFront, lm[L.l_ft], null, w, h);
 
-            // Puntos lado derecho del paciente (izquierda pantalla)
             drawJoint(ctxFront, lm[L.r_sh], r_sh, w, h);
             drawJoint(ctxFront, lm[L.r_el], r_el, w, h);
             drawJoint(ctxFront, lm[L.r_hi], r_hi, w, h);
@@ -524,17 +563,14 @@
         btnCapture.addEventListener('click', () => {
             document.getElementById('results-section').style.display = 'block';
             
-            // Asignación de Perfil Detectado
             document.getElementById('res-sag-side').innerText = currentData.sagittal.side;
 
-            // Resultados Plano Sagital
             document.getElementById('res-sag-hombro').innerText = currentData.sagittal.hombro + '°';
             document.getElementById('res-sag-codo').innerText = currentData.sagittal.codo + '°';
             document.getElementById('res-sag-cadera').innerText = currentData.sagittal.cadera + '°';
             document.getElementById('res-sag-rodilla').innerText = currentData.sagittal.rodilla + '°';
             document.getElementById('res-sag-tobillo').innerText = currentData.sagittal.tobillo + '°';
             
-            // Resultados Plano Frontal (Vienen con formato Der / Izq por defecto)
             document.getElementById('res-front-hombro').innerText = currentData.frontal.hombro;
             document.getElementById('res-front-codo').innerText = currentData.frontal.codo;
             document.getElementById('res-front-cadera').innerText = currentData.frontal.cadera;
