@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analizador de Sentadilla</title>
-    <!-- Carga de MediaPipe desde CDN oficial -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <!-- Carga de MediaPipe desde CDN oficial fijando una VERSIÓN ESTABLE para evitar errores de carga -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
     
     <style>
         :root {
@@ -86,10 +86,6 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* 
-         El video define su altura en base al ancho manteniendo proporción.
-         El canvas cubre exactamente el área del video. 
-        */
         video {
             width: 100%;
             height: auto;
@@ -102,7 +98,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Deja que los clics pasen al video si es necesario */
+            pointer-events: none;
         }
 
         .controls {
@@ -132,10 +128,7 @@
             cursor: not-allowed;
         }
 
-        #btn-play {
-            background-color: var(--primary);
-        }
-
+        #btn-play { background-color: var(--primary); }
         #btn-play:active { background-color: var(--primary-hover); }
 
         #btn-capture {
@@ -143,7 +136,6 @@
             font-size: 1.2rem;
             padding: 20px 30px;
         }
-
         #btn-capture:active { background-color: var(--success-hover); }
 
         /* Resultados */
@@ -181,7 +173,6 @@
             font-weight: 500;
         }
 
-        /* Responsive Desktop */
         @media (min-width: 768px) {
             .upload-section { flex-direction: row; }
             .videos-grid { flex-direction: row; }
@@ -248,7 +239,6 @@
     </div>
 
     <script>
-        // --- Referencias del DOM ---
         const videoSag = document.getElementById('video-sag');
         const videoFront = document.getElementById('video-front');
         const canvasSag = document.getElementById('canvas-sag');
@@ -260,18 +250,15 @@
         const btnCapture = document.getElementById('btn-capture');
         const statusText = document.getElementById('status');
 
-        // --- Estado de la App ---
         let isPlaying = false;
         let isProcessing = false;
         let animationFrameId = null;
         
-        // Almacena los últimos valores calculados en tiempo real
         const currentData = {
             sagittal: { hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' },
             frontal: { hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' }
         };
 
-        // Índices anatómicos de MediaPipe Pose
         const L = {
             l_sh: 11, r_sh: 12, // Hombros
             l_el: 13, r_el: 14, // Codos
@@ -279,29 +266,33 @@
             l_hi: 23, r_hi: 24, // Caderas
             l_kn: 25, r_kn: 26, // Rodillas
             l_an: 27, r_an: 28, // Tobillos
-            l_ft: 31, r_ft: 32  // Puntas del pie (Index)
+            l_ft: 31, r_ft: 32  // Puntas del pie
         };
 
-        // --- Funciones Matemáticas ---
-        // Calcula el ángulo entre 3 puntos, siendo p2 el vértice
         function calculateAngle(p1, p2, p3) {
             if (!p1 || !p2 || !p3 || p1.visibility < 0.4 || p2.visibility < 0.4 || p3.visibility < 0.4) return null;
-            
             let radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x);
             let angle = Math.abs(radians * 180.0 / Math.PI);
             if (angle > 180.0) angle = 360.0 - angle;
             return Math.round(angle);
         }
 
-        // --- Funciones de Dibujo ---
-        // Dibuja el landmark centrado y su texto
+        // Nueva función para dibujar las líneas entre los puntos
+        function drawLine(ctx, p1, p2, width, height) {
+            if (!p1 || !p2 || p1.visibility < 0.4 || p2.visibility < 0.4) return;
+            ctx.beginPath();
+            ctx.moveTo(p1.x * width, p1.y * height);
+            ctx.lineTo(p2.x * width, p2.y * height);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#00ff00'; // Línea verde para resaltar el esqueleto
+            ctx.stroke();
+        }
+
         function drawJoint(ctx, landmark, angleValue, width, height) {
-            if (!landmark || landmark.visibility < 0.4 || angleValue === null) return;
-            
+            if (!landmark || landmark.visibility < 0.4) return;
             const x = landmark.x * width;
             const y = landmark.y * height;
 
-            // Punto centrado EXACTAMENTE sobre la articulación
             ctx.beginPath();
             ctx.arc(x, y, 6, 0, 2 * Math.PI);
             ctx.fillStyle = '#ff0000';
@@ -310,28 +301,25 @@
             ctx.strokeStyle = '#ffffff';
             ctx.stroke();
 
-            // Texto numérico del ángulo
-            ctx.font = "bold 18px Arial";
-            ctx.fillStyle = "#ffffff";
-            ctx.strokeStyle = "#000000";
-            ctx.lineWidth = 3;
-            ctx.strokeText(`${angleValue}°`, x + 12, y - 10);
-            ctx.fillText(`${angleValue}°`, x + 12, y - 10);
+            if (angleValue !== null) {
+                ctx.font = "bold 18px Arial";
+                ctx.fillStyle = "#ffffff";
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 3;
+                ctx.strokeText(`${angleValue}°`, x + 12, y - 10);
+                ctx.fillText(`${angleValue}°`, x + 12, y - 10);
+            }
         }
 
-        // --- Procesamiento Plano Sagital ---
         function onResultsSagittal(results) {
             ctxSag.clearRect(0, 0, canvasSag.width, canvasSag.height);
             if (!results.poseLandmarks) return;
 
             const lm = results.poseLandmarks;
-            
-            // Detectar qué lado está mirando la cámara en base a visibilidad
             const leftVisibility = lm[L.l_hi].visibility + lm[L.l_kn].visibility;
             const rightVisibility = lm[L.r_hi].visibility + lm[L.r_kn].visibility;
             const isLeft = leftVisibility > rightVisibility;
 
-            // Seleccionar los puntos del lado visible
             const p_sh = isLeft ? L.l_sh : L.r_sh;
             const p_el = isLeft ? L.l_el : L.r_el;
             const p_wr = isLeft ? L.l_wr : L.r_wr;
@@ -340,31 +328,39 @@
             const p_an = isLeft ? L.l_an : L.r_an;
             const p_ft = isLeft ? L.l_ft : L.r_ft;
 
-            // Cálculos
             const ang_sh = calculateAngle(lm[p_hi], lm[p_sh], lm[p_el]);
             const ang_el = calculateAngle(lm[p_sh], lm[p_el], lm[p_wr]);
             const ang_hi = calculateAngle(lm[p_sh], lm[p_hi], lm[p_kn]);
             const ang_kn = calculateAngle(lm[p_hi], lm[p_kn], lm[p_an]);
             const ang_an = calculateAngle(lm[p_kn], lm[p_an], lm[p_ft]);
 
-            // Guardar datos
             currentData.sagittal.hombro = ang_sh ?? '--';
             currentData.sagittal.codo = ang_el ?? '--';
             currentData.sagittal.cadera = ang_hi ?? '--';
             currentData.sagittal.rodilla = ang_kn ?? '--';
             currentData.sagittal.tobillo = ang_an ?? '--';
 
-            // Dibujar
             const w = canvasSag.width;
             const h = canvasSag.height;
+
+            // Dibujar las líneas (esqueleto) primero
+            drawLine(ctxSag, lm[p_sh], lm[p_el], w, h);
+            drawLine(ctxSag, lm[p_el], lm[p_wr], w, h);
+            drawLine(ctxSag, lm[p_sh], lm[p_hi], w, h);
+            drawLine(ctxSag, lm[p_hi], lm[p_kn], w, h);
+            drawLine(ctxSag, lm[p_kn], lm[p_an], w, h);
+            drawLine(ctxSag, lm[p_an], lm[p_ft], w, h);
+
+            // Luego dibujar los puntos encima
             drawJoint(ctxSag, lm[p_sh], ang_sh, w, h);
             drawJoint(ctxSag, lm[p_el], ang_el, w, h);
             drawJoint(ctxSag, lm[p_hi], ang_hi, w, h);
             drawJoint(ctxSag, lm[p_kn], ang_kn, w, h);
             drawJoint(ctxSag, lm[p_an], ang_an, w, h);
+            drawJoint(ctxSag, lm[p_wr], null, w, h); // Mostrar muñeca y pie para contexto
+            drawJoint(ctxSag, lm[p_ft], null, w, h);
         }
 
-        // --- Procesamiento Plano Frontal ---
         function onResultsFrontal(results) {
             ctxFront.clearRect(0, 0, canvasFront.width, canvasFront.height);
             if (!results.poseLandmarks) return;
@@ -373,57 +369,62 @@
             const w = canvasFront.width;
             const h = canvasFront.height;
 
-            // IMPLEMENTACIÓN: Promedio entre lado izquierdo y derecho
             const calcAvg = (l_ang, r_ang) => {
                 if (l_ang !== null && r_ang !== null) return Math.round((l_ang + r_ang) / 2);
                 return l_ang || r_ang || null;
             };
 
-            const l_sh = calculateAngle(lm[L.l_hi], lm[L.l_sh], lm[L.l_el]);
-            const r_sh = calculateAngle(lm[L.r_hi], lm[L.r_sh], lm[L.r_el]);
-            const ang_sh = calcAvg(l_sh, r_sh);
+            const ang_sh = calcAvg(calculateAngle(lm[L.l_hi], lm[L.l_sh], lm[L.l_el]), calculateAngle(lm[L.r_hi], lm[L.r_sh], lm[L.r_el]));
+            const ang_el = calcAvg(calculateAngle(lm[L.l_sh], lm[L.l_el], lm[L.l_wr]), calculateAngle(lm[L.r_sh], lm[L.r_el], lm[L.r_wr]));
+            const ang_hi = calcAvg(calculateAngle(lm[L.l_sh], lm[L.l_hi], lm[L.l_kn]), calculateAngle(lm[L.r_sh], lm[L.r_hi], lm[L.r_kn]));
+            const ang_kn = calcAvg(calculateAngle(lm[L.l_hi], lm[L.l_kn], lm[L.l_an]), calculateAngle(lm[L.r_hi], lm[L.r_kn], lm[L.r_an]));
+            const ang_an = calcAvg(calculateAngle(lm[L.l_kn], lm[L.l_an], lm[L.l_ft]), calculateAngle(lm[L.r_kn], lm[L.r_an], lm[L.r_ft]));
 
-            const l_el = calculateAngle(lm[L.l_sh], lm[L.l_el], lm[L.l_wr]);
-            const r_el = calculateAngle(lm[L.r_sh], lm[L.r_el], lm[L.r_wr]);
-            const ang_el = calcAvg(l_el, r_el);
-
-            const l_hi = calculateAngle(lm[L.l_sh], lm[L.l_hi], lm[L.l_kn]);
-            const r_hi = calculateAngle(lm[L.r_sh], lm[L.r_hi], lm[L.r_kn]);
-            const ang_hi = calcAvg(l_hi, r_hi);
-
-            const l_kn = calculateAngle(lm[L.l_hi], lm[L.l_kn], lm[L.l_an]);
-            const r_kn = calculateAngle(lm[L.r_hi], lm[L.r_kn], lm[L.r_an]);
-            const ang_kn = calcAvg(l_kn, r_kn);
-
-            const l_an = calculateAngle(lm[L.l_kn], lm[L.l_an], lm[L.l_ft]);
-            const r_an = calculateAngle(lm[L.r_kn], lm[L.r_an], lm[L.r_ft]);
-            const ang_an = calcAvg(l_an, r_an);
-
-            // Guardar datos
             currentData.frontal.hombro = ang_sh ?? '--';
             currentData.frontal.codo = ang_el ?? '--';
             currentData.frontal.cadera = ang_hi ?? '--';
             currentData.frontal.rodilla = ang_kn ?? '--';
             currentData.frontal.tobillo = ang_an ?? '--';
 
-            // Dibujar sobre ambos lados para mantener simetría visual (texto solo en uno para no saturar)
-            // Lado Izquierdo del paciente (derecha pantalla)
+            // Dibujar líneas esqueleto lado Izquierdo
+            drawLine(ctxFront, lm[L.l_sh], lm[L.l_el], w, h);
+            drawLine(ctxFront, lm[L.l_el], lm[L.l_wr], w, h);
+            drawLine(ctxFront, lm[L.l_sh], lm[L.l_hi], w, h);
+            drawLine(ctxFront, lm[L.l_hi], lm[L.l_kn], w, h);
+            drawLine(ctxFront, lm[L.l_kn], lm[L.l_an], w, h);
+            drawLine(ctxFront, lm[L.l_an], lm[L.l_ft], w, h);
+
+            // Dibujar líneas esqueleto lado Derecho
+            drawLine(ctxFront, lm[L.r_sh], lm[L.r_el], w, h);
+            drawLine(ctxFront, lm[L.r_el], lm[L.r_wr], w, h);
+            drawLine(ctxFront, lm[L.r_sh], lm[L.r_hi], w, h);
+            drawLine(ctxFront, lm[L.r_hi], lm[L.r_kn], w, h);
+            drawLine(ctxFront, lm[L.r_kn], lm[L.r_an], w, h);
+            drawLine(ctxFront, lm[L.r_an], lm[L.r_ft], w, h);
+
+            // Conectar hombros y caderas (opcional pero ayuda a visualizar el tronco)
+            drawLine(ctxFront, lm[L.l_sh], lm[L.r_sh], w, h);
+            drawLine(ctxFront, lm[L.l_hi], lm[L.r_hi], w, h);
+
+            // Puntos lado izquierdo (sin texto numérico para no saturar)
             drawJoint(ctxFront, lm[L.l_sh], null, w, h);
             drawJoint(ctxFront, lm[L.l_el], null, w, h);
             drawJoint(ctxFront, lm[L.l_hi], null, w, h);
             drawJoint(ctxFront, lm[L.l_kn], null, w, h);
             drawJoint(ctxFront, lm[L.l_an], null, w, h);
+            drawJoint(ctxFront, lm[L.l_wr], null, w, h);
+            drawJoint(ctxFront, lm[L.l_ft], null, w, h);
 
-            // Lado Derecho del paciente (izquierda pantalla) - Mostramos el promedio aquí
+            // Puntos lado derecho (con los ángulos calculados en promedio)
             drawJoint(ctxFront, lm[L.r_sh], ang_sh, w, h);
             drawJoint(ctxFront, lm[L.r_el], ang_el, w, h);
             drawJoint(ctxFront, lm[L.r_hi], ang_hi, w, h);
             drawJoint(ctxFront, lm[L.r_kn], ang_kn, w, h);
             drawJoint(ctxFront, lm[L.r_an], ang_an, w, h);
+            drawJoint(ctxFront, lm[L.r_wr], null, w, h);
+            drawJoint(ctxFront, lm[L.r_ft], null, w, h);
         }
 
-        // --- Configuración de MediaPipe ---
-        // Usamos modelComplexity 0 (Lite) para alto rendimiento en celulares
         const poseOptions = {
             modelComplexity: 0,
             smoothLandmarks: true,
@@ -431,65 +432,50 @@
             minTrackingConfidence: 0.5
         };
 
-        const poseSagittal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+        const poseSagittal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`});
         poseSagittal.setOptions(poseOptions);
         poseSagittal.onResults(onResultsSagittal);
 
-        const poseFrontal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+        const poseFrontal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`});
         poseFrontal.setOptions(poseOptions);
         poseFrontal.onResults(onResultsFrontal);
 
-        // Inicializar modelos
         Promise.all([poseSagittal.initialize(), poseFrontal.initialize()]).then(() => {
             statusText.style.color = 'var(--success)';
-            statusText.innerText = 'Modelos cargados. Selecciona los videos para continuar.';
+            statusText.innerText = 'Modelos cargados correctamente. Sube los videos.';
             btnPlay.disabled = false;
             btnCapture.disabled = false;
         }).catch(err => {
-            statusText.innerText = 'Error al cargar los modelos. Revisa tu conexión.';
+            statusText.innerText = 'Error al cargar los modelos. Revisa tu conexión a internet.';
             console.error(err);
         });
 
-        // --- Bucle de Sincronización y Procesamiento ---
         async function processFrames() {
             if (!isPlaying) return;
-            
-            // Evitar acumulación de frames en celulares
             if (!isProcessing) {
                 isProcessing = true;
                 try {
                     const promises = [];
-                    // Aseguramos que el video tenga datos antes de enviar a MediaPipe
-                    if (videoSag.readyState >= 2 && !videoSag.paused) {
-                        promises.push(poseSagittal.send({image: videoSag}));
-                    }
-                    if (videoFront.readyState >= 2 && !videoFront.paused) {
-                        promises.push(poseFrontal.send({image: videoFront}));
-                    }
+                    if (videoSag.readyState >= 2 && !videoSag.paused) promises.push(poseSagittal.send({image: videoSag}));
+                    if (videoFront.readyState >= 2 && !videoFront.paused) promises.push(poseFrontal.send({image: videoFront}));
                     await Promise.all(promises);
                 } catch (error) {
                     console.error("Error procesando frame:", error);
                 }
                 isProcessing = false;
             }
-            
             animationFrameId = requestAnimationFrame(processFrames);
         }
 
-        // --- Control de Contenedores y Redimensionamiento ---
-        // FUNDAMENTAL: Igualar resolución interna del canvas a resolución original del video
         function setupVideo(inputElem, videoElem, canvasElem) {
             inputElem.addEventListener('change', (e) => {
                 const file = e.target.files[0];
-                if (file) {
-                    videoElem.src = URL.createObjectURL(file);
-                }
+                if (file) videoElem.src = URL.createObjectURL(file);
             });
 
             videoElem.addEventListener('loadeddata', () => {
                 canvasElem.width = videoElem.videoWidth;
                 canvasElem.height = videoElem.videoHeight;
-                // Dibujar un frame inicial
                 if(videoElem === videoSag) poseSagittal.send({image: videoElem});
                 if(videoElem === videoFront) poseFrontal.send({image: videoElem});
             });
@@ -498,13 +484,11 @@
         setupVideo(document.getElementById('input-sag'), videoSag, canvasSag);
         setupVideo(document.getElementById('input-front'), videoFront, canvasFront);
 
-        // --- Eventos de Botones ---
         btnPlay.addEventListener('click', () => {
             if (!videoSag.src && !videoFront.src) {
                 alert('Por favor carga al menos un video primero.');
                 return;
             }
-
             if (isPlaying) {
                 videoSag.pause();
                 videoFront.pause();
@@ -519,26 +503,21 @@
         });
 
         btnCapture.addEventListener('click', () => {
-            // Mostrar panel
             document.getElementById('results-section').style.display = 'block';
-
-            // Actualizar DOM con valores guardados exactamente en este instante
             document.getElementById('res-sag-hombro').innerText = currentData.sagittal.hombro + '°';
             document.getElementById('res-sag-codo').innerText = currentData.sagittal.codo + '°';
             document.getElementById('res-sag-cadera').innerText = currentData.sagittal.cadera + '°';
             document.getElementById('res-sag-rodilla').innerText = currentData.sagittal.rodilla + '°';
             document.getElementById('res-sag-tobillo').innerText = currentData.sagittal.tobillo + '°';
-
+            
             document.getElementById('res-front-hombro').innerText = currentData.frontal.hombro + '°';
             document.getElementById('res-front-codo').innerText = currentData.frontal.codo + '°';
             document.getElementById('res-front-cadera').innerText = currentData.frontal.cadera + '°';
             document.getElementById('res-front-rodilla').innerText = currentData.frontal.rodilla + '°';
             document.getElementById('res-front-tobillo').innerText = currentData.frontal.tobillo + '°';
-
-            // Hacer scroll hacia los resultados suavemente
+            
             document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
         });
-
     </script>
 </body>
 </html>
