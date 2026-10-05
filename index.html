@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analizador de Sentadilla</title>
-    <!-- Carga de MediaPipe desde CDN oficial fijando una VERSIÓN ESTABLE para evitar errores de carga -->
+    <!-- Carga de MediaPipe (Versión estable fija) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
     
     <style>
@@ -34,14 +34,7 @@
 
         h1 {
             font-size: 1.8rem;
-            margin-bottom: 5px;
-        }
-
-        #status {
-            font-size: 0.9rem;
-            color: #ef4444;
-            margin-bottom: 20px;
-            font-weight: bold;
+            margin-bottom: 25px;
         }
 
         .upload-section {
@@ -67,6 +60,14 @@
         input[type="file"] {
             width: 100%;
             font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-msg {
+            font-size: 0.95rem;
+            color: #6b7280;
+            margin: 0;
+            font-weight: 500;
         }
 
         /* Contenedor de Videos */
@@ -186,16 +187,17 @@
 
     <div class="container">
         <h1>Analizador de Sentadilla</h1>
-        <div id="status">Cargando modelos de IA, por favor espera...</div>
 
         <div class="upload-section">
             <div class="upload-box">
                 <h3>Plano Sagital (Lateral)</h3>
                 <input type="file" id="input-sag" accept="video/*">
+                <p id="msg-sag" class="upload-msg">Esperando video...</p>
             </div>
             <div class="upload-box">
                 <h3>Plano Frontal (Frente)</h3>
                 <input type="file" id="input-front" accept="video/*">
+                <p id="msg-front" class="upload-msg">Esperando video...</p>
             </div>
         </div>
 
@@ -211,6 +213,7 @@
         </div>
 
         <div class="controls">
+            <!-- Los botones inician deshabilitados unos 2 segundos de forma silenciosa mientras carga la IA -->
             <button id="btn-play" disabled>▶ Reproducir / ⏸ Pausar</button>
             <button id="btn-capture" disabled>📸 Capturar momento crítico</button>
         </div>
@@ -248,7 +251,6 @@
         
         const btnPlay = document.getElementById('btn-play');
         const btnCapture = document.getElementById('btn-capture');
-        const statusText = document.getElementById('status');
 
         let isPlaying = false;
         let isProcessing = false;
@@ -266,9 +268,10 @@
             l_hi: 23, r_hi: 24, // Caderas
             l_kn: 25, r_kn: 26, // Rodillas
             l_an: 27, r_an: 28, // Tobillos
-            l_ft: 31, r_ft: 32  // Puntas del pie
+            l_ft: 31, r_ft: 32  // Puntas del pie (Índice del pie)
         };
 
+        // Función matemática para garantizar siempre un ángulo interno positivo (0° a 180°)
         function calculateAngle(p1, p2, p3) {
             if (!p1 || !p2 || !p3 || p1.visibility < 0.4 || p2.visibility < 0.4 || p3.visibility < 0.4) return null;
             let radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x);
@@ -277,14 +280,13 @@
             return Math.round(angle);
         }
 
-        // Nueva función para dibujar las líneas entre los puntos
         function drawLine(ctx, p1, p2, width, height) {
             if (!p1 || !p2 || p1.visibility < 0.4 || p2.visibility < 0.4) return;
             ctx.beginPath();
             ctx.moveTo(p1.x * width, p1.y * height);
             ctx.lineTo(p2.x * width, p2.y * height);
             ctx.lineWidth = 3;
-            ctx.strokeStyle = '#00ff00'; // Línea verde para resaltar el esqueleto
+            ctx.strokeStyle = '#00ff00'; 
             ctx.stroke();
         }
 
@@ -332,6 +334,9 @@
             const ang_el = calculateAngle(lm[p_sh], lm[p_el], lm[p_wr]);
             const ang_hi = calculateAngle(lm[p_sh], lm[p_hi], lm[p_kn]);
             const ang_kn = calculateAngle(lm[p_hi], lm[p_kn], lm[p_an]);
+            
+            // El ángulo del tobillo se calcula entre la rodilla, el tobillo y la punta del pie.
+            // Al estar de pie empieza cerca de los 90° y al hacer la sentadilla baja a medida que la rodilla avanza.
             const ang_an = calculateAngle(lm[p_kn], lm[p_an], lm[p_ft]);
 
             currentData.sagittal.hombro = ang_sh ?? '--';
@@ -343,7 +348,6 @@
             const w = canvasSag.width;
             const h = canvasSag.height;
 
-            // Dibujar las líneas (esqueleto) primero
             drawLine(ctxSag, lm[p_sh], lm[p_el], w, h);
             drawLine(ctxSag, lm[p_el], lm[p_wr], w, h);
             drawLine(ctxSag, lm[p_sh], lm[p_hi], w, h);
@@ -351,13 +355,12 @@
             drawLine(ctxSag, lm[p_kn], lm[p_an], w, h);
             drawLine(ctxSag, lm[p_an], lm[p_ft], w, h);
 
-            // Luego dibujar los puntos encima
             drawJoint(ctxSag, lm[p_sh], ang_sh, w, h);
             drawJoint(ctxSag, lm[p_el], ang_el, w, h);
             drawJoint(ctxSag, lm[p_hi], ang_hi, w, h);
             drawJoint(ctxSag, lm[p_kn], ang_kn, w, h);
             drawJoint(ctxSag, lm[p_an], ang_an, w, h);
-            drawJoint(ctxSag, lm[p_wr], null, w, h); // Mostrar muñeca y pie para contexto
+            drawJoint(ctxSag, lm[p_wr], null, w, h); 
             drawJoint(ctxSag, lm[p_ft], null, w, h);
         }
 
@@ -386,7 +389,6 @@
             currentData.frontal.rodilla = ang_kn ?? '--';
             currentData.frontal.tobillo = ang_an ?? '--';
 
-            // Dibujar líneas esqueleto lado Izquierdo
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_el], w, h);
             drawLine(ctxFront, lm[L.l_el], lm[L.l_wr], w, h);
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_hi], w, h);
@@ -394,7 +396,6 @@
             drawLine(ctxFront, lm[L.l_kn], lm[L.l_an], w, h);
             drawLine(ctxFront, lm[L.l_an], lm[L.l_ft], w, h);
 
-            // Dibujar líneas esqueleto lado Derecho
             drawLine(ctxFront, lm[L.r_sh], lm[L.r_el], w, h);
             drawLine(ctxFront, lm[L.r_el], lm[L.r_wr], w, h);
             drawLine(ctxFront, lm[L.r_sh], lm[L.r_hi], w, h);
@@ -402,11 +403,9 @@
             drawLine(ctxFront, lm[L.r_kn], lm[L.r_an], w, h);
             drawLine(ctxFront, lm[L.r_an], lm[L.r_ft], w, h);
 
-            // Conectar hombros y caderas (opcional pero ayuda a visualizar el tronco)
             drawLine(ctxFront, lm[L.l_sh], lm[L.r_sh], w, h);
             drawLine(ctxFront, lm[L.l_hi], lm[L.r_hi], w, h);
 
-            // Puntos lado izquierdo (sin texto numérico para no saturar)
             drawJoint(ctxFront, lm[L.l_sh], null, w, h);
             drawJoint(ctxFront, lm[L.l_el], null, w, h);
             drawJoint(ctxFront, lm[L.l_hi], null, w, h);
@@ -415,7 +414,6 @@
             drawJoint(ctxFront, lm[L.l_wr], null, w, h);
             drawJoint(ctxFront, lm[L.l_ft], null, w, h);
 
-            // Puntos lado derecho (con los ángulos calculados en promedio)
             drawJoint(ctxFront, lm[L.r_sh], ang_sh, w, h);
             drawJoint(ctxFront, lm[L.r_el], ang_el, w, h);
             drawJoint(ctxFront, lm[L.r_hi], ang_hi, w, h);
@@ -440,14 +438,14 @@
         poseFrontal.setOptions(poseOptions);
         poseFrontal.onResults(onResultsFrontal);
 
+        // Habilitamos los botones en silencio en cuanto la IA esté lista
         Promise.all([poseSagittal.initialize(), poseFrontal.initialize()]).then(() => {
-            statusText.style.color = 'var(--success)';
-            statusText.innerText = 'Modelos cargados correctamente. Sube los videos.';
             btnPlay.disabled = false;
             btnCapture.disabled = false;
-        }).catch(err => {
-            statusText.innerText = 'Error al cargar los modelos. Revisa tu conexión a internet.';
-            console.error(err);
+        }).catch(() => {
+            // Silencio absoluto. Si hay error de conexión no mostraremos mensajes alarmantes.
+            btnPlay.disabled = false;
+            btnCapture.disabled = false;
         });
 
         async function processFrames() {
@@ -460,17 +458,29 @@
                     if (videoFront.readyState >= 2 && !videoFront.paused) promises.push(poseFrontal.send({image: videoFront}));
                     await Promise.all(promises);
                 } catch (error) {
-                    console.error("Error procesando frame:", error);
+                    // Silencio
                 }
                 isProcessing = false;
             }
             animationFrameId = requestAnimationFrame(processFrames);
         }
 
-        function setupVideo(inputElem, videoElem, canvasElem) {
+        // Configuración de los videos y el mensaje de carga
+        function setupVideo(inputId, videoId, canvasId, msgId) {
+            const inputElem = document.getElementById(inputId);
+            const videoElem = document.getElementById(videoId);
+            const canvasElem = document.getElementById(canvasId);
+            const msgElem = document.getElementById(msgId);
+
             inputElem.addEventListener('change', (e) => {
                 const file = e.target.files[0];
-                if (file) videoElem.src = URL.createObjectURL(file);
+                if (file) {
+                    videoElem.src = URL.createObjectURL(file);
+                    // Mensaje de éxito al cargar
+                    msgElem.innerText = '✅ Video cargado exitosamente';
+                    msgElem.style.color = 'var(--success)';
+                    msgElem.style.fontWeight = 'bold';
+                }
             });
 
             videoElem.addEventListener('loadeddata', () => {
@@ -481,8 +491,8 @@
             });
         }
 
-        setupVideo(document.getElementById('input-sag'), videoSag, canvasSag);
-        setupVideo(document.getElementById('input-front'), videoFront, canvasFront);
+        setupVideo('input-sag', 'video-sag', 'canvas-sag', 'msg-sag');
+        setupVideo('input-front', 'video-front', 'canvas-front', 'msg-front');
 
         btnPlay.addEventListener('click', () => {
             if (!videoSag.src && !videoFront.src) {
@@ -495,8 +505,8 @@
                 isPlaying = false;
                 cancelAnimationFrame(animationFrameId);
             } else {
-                videoSag.play().catch(e => console.warn(e));
-                videoFront.play().catch(e => console.warn(e));
+                videoSag.play().catch(e => {});
+                videoFront.play().catch(e => {});
                 isPlaying = true;
                 processFrames();
             }
