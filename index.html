@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador de Sentadilla - MediaPipe</title>
 
-    <!-- MediaPipe -->
+    <title>Analizador de Sentadilla</title>
+
+    <!-- ==============================
+         MEDIAPIPE POSE
+    =============================== -->
+
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
     <style>
+
         * {
             box-sizing: border-box;
         }
@@ -18,15 +22,19 @@
         body {
             margin: 0;
             font-family: Arial, Helvetica, sans-serif;
-            background: #f4f5f7;
+            background: #f3f4f6;
             color: #222;
         }
 
+        /* ==============================
+           ENCABEZADO
+        =============================== */
+
         header {
-            background: #222;
+            background: #202124;
             color: white;
             text-align: center;
-            padding: 20px;
+            padding: 22px;
         }
 
         header h1 {
@@ -36,23 +44,38 @@
 
         header p {
             margin: 8px 0 0;
-            color: #ccc;
+            color: #d0d0d0;
         }
 
+
+        /* ==============================
+           CARGA DE VIDEOS
+        =============================== */
+
         .upload-section {
+
             display: flex;
             justify-content: center;
-            gap: 30px;
+            gap: 25px;
+
             padding: 25px;
+
             flex-wrap: wrap;
         }
 
         .upload-box {
+
             background: white;
-            padding: 20px;
-            border-radius: 12px;
+
             width: 350px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+
+            padding: 20px;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 3px 12px rgba(0,0,0,0.12);
+
             text-align: center;
         }
 
@@ -62,86 +85,167 @@
 
         input[type="file"] {
             width: 100%;
-            margin-top: 10px;
         }
 
-        .video-container {
+
+        /* ==============================
+           ESTADO
+        =============================== */
+
+        #status {
+
+            text-align: center;
+
+            font-weight: bold;
+
+            margin-bottom: 15px;
+        }
+
+
+        /* ==============================
+           CONTENEDOR DE VIDEOS
+        =============================== */
+
+        .videos {
+
             display: grid;
+
             grid-template-columns: 1fr 1fr;
+
             gap: 15px;
+
             padding: 0 20px;
         }
 
+
+        /* ==============================
+           CAJA DEL VIDEO
+        =============================== */
+
         .video-box {
+
             position: relative;
+
             background: black;
+
             border-radius: 10px;
+
             overflow: hidden;
-            min-height: 350px;
+
+            /*
+             Importante:
+             la altura será determinada
+             por el propio video.
+            */
+            line-height: 0;
         }
 
-        video {
-            width: 100%;
-            height: 100%;
-            max-height: 600px;
-            object-fit: contain;
-            display: block;
-            background: black;
-        }
-
-        .video-title {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 10;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 7px 12px;
-            border-radius: 6px;
-            font-weight: bold;
-        }
 
         /*
-            Canvas encima del video.
-            Aquí se dibujan:
-            - puntos corporales
-            - líneas
-            - ángulos
+         EL VIDEO MANTIENE SU PROPORCIÓN
+         ORIGINAL.
         */
+
+        video {
+
+            display: block;
+
+            width: 100%;
+
+            height: auto;
+
+            background: black;
+        }
+
+
+        /* ==============================
+           CANVAS
+        =============================== */
+
         .overlay {
+
             position: absolute;
+
             top: 0;
             left: 0;
+
             width: 100%;
             height: 100%;
+
             pointer-events: none;
         }
 
+
+        /* ==============================
+           TITULO SOBRE VIDEO
+        =============================== */
+
+        .video-title {
+
+            position: absolute;
+
+            top: 10px;
+            left: 10px;
+
+            z-index: 5;
+
+            background: rgba(0,0,0,0.7);
+
+            color: white;
+
+            padding: 7px 12px;
+
+            border-radius: 6px;
+
+            font-weight: bold;
+
+            line-height: normal;
+        }
+
+
+        /* ==============================
+           CONTROLES
+        =============================== */
+
         .controls {
+
             display: flex;
+
             justify-content: center;
-            align-items: center;
+
             gap: 15px;
+
             padding: 25px;
+
             flex-wrap: wrap;
         }
 
         button {
+
             border: none;
+
             border-radius: 8px;
+
             padding: 13px 22px;
+
             font-size: 16px;
+
             font-weight: bold;
+
             cursor: pointer;
         }
 
         #playPause {
+
             background: #222;
+
             color: white;
         }
 
         #capture {
+
             background: #b51d1d;
+
             color: white;
         }
 
@@ -149,116 +253,213 @@
             opacity: 0.85;
         }
 
-        .critical-analysis {
-            background: white;
+
+        /* ==============================
+           ANALISIS FINAL
+        =============================== */
+
+        .final-analysis {
+
             margin: 20px;
+
             padding: 25px;
+
+            background: white;
+
             border-radius: 12px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+
+            box-shadow:
+                0 3px 12px rgba(0,0,0,0.12);
         }
 
-        .critical-analysis h2 {
+        .final-analysis > h2 {
+
             text-align: center;
+
             margin-top: 0;
         }
 
-        .angle-results {
+
+        /*
+         SEPARACIÓN ENTRE PLANOS
+        */
+
+        .planes {
+
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 25px;
         }
+
+
+        .plane {
+
+            border: 2px solid #ddd;
+
+            border-radius: 10px;
+
+            padding: 20px;
+        }
+
+
+        .plane h3 {
+
+            text-align: center;
+
+            margin-top: 0;
+        }
+
+
+        .angle-list {
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 12px;
+        }
+
 
         .angle-card {
+
             background: #f0f1f3;
-            padding: 18px;
+
+            padding: 15px;
+
+            border-radius: 8px;
+
             text-align: center;
-            border-radius: 10px;
         }
 
-        .angle-card h3 {
-            margin: 0 0 10px;
-            font-size: 16px;
+
+        .angle-name {
+
+            font-weight: bold;
+
+            margin-bottom: 8px;
         }
+
 
         .angle-value {
-            font-size: 28px;
+
+            font-size: 26px;
+
             font-weight: bold;
         }
 
-        #status {
-            text-align: center;
-            padding: 10px;
-            font-weight: bold;
-        }
+
+        /* ==============================
+           RESPONSIVE
+        =============================== */
 
         @media (max-width: 900px) {
-            .video-container {
+
+            .videos {
+
                 grid-template-columns: 1fr;
             }
 
-            .angle-results {
-                grid-template-columns: repeat(2, 1fr);
+            .planes {
+
+                grid-template-columns: 1fr;
             }
+
         }
 
         @media (max-width: 500px) {
-            .angle-results {
+
+            .angle-list {
+
                 grid-template-columns: 1fr;
             }
+
         }
+
     </style>
+
 </head>
+
 
 <body>
 
+
+<!-- =====================================================
+     ENCABEZADO
+====================================================== -->
+
 <header>
-    <h1>Analizador de Sentadilla</h1>
-    <p>Análisis biomecánico mediante MediaPipe</p>
+
+    <h1>
+        Analizador de Sentadilla
+    </h1>
+
+    <p>
+        Análisis mediante MediaPipe Pose
+    </p>
+
 </header>
 
 
-<!-- =========================
+<!-- =====================================================
      CARGA DE VIDEOS
-========================= -->
+====================================================== -->
 
 <section class="upload-section">
 
     <div class="upload-box">
-        <h3>Vista Sagital</h3>
+
+        <h3>
+            Video — Plano Sagital
+        </h3>
+
         <input
             type="file"
             id="sagittalInput"
             accept="video/*">
+
     </div>
 
+
     <div class="upload-box">
-        <h3>Vista Frontal</h3>
+
+        <h3>
+            Video — Plano Frontal
+        </h3>
+
         <input
             type="file"
             id="frontalInput"
             accept="video/*">
+
     </div>
 
 </section>
 
 
 <div id="status">
+
     Carga ambos videos para comenzar.
+
 </div>
 
 
-<!-- =========================
+<!-- =====================================================
      VIDEOS
-========================= -->
+====================================================== -->
 
-<section class="video-container">
+<section class="videos">
 
-    <!-- SAGITAL -->
+
+    <!-- =========================
+         SAGITAL
+    ========================== -->
 
     <div class="video-box">
 
         <div class="video-title">
-            SAGITAL
+            PLANO SAGITAL
         </div>
 
         <video
@@ -274,12 +475,14 @@
     </div>
 
 
-    <!-- FRONTAL -->
+    <!-- =========================
+         FRONTAL
+    ========================== -->
 
     <div class="video-box">
 
         <div class="video-title">
-            FRONTAL
+            PLANO FRONTAL
         </div>
 
         <video
@@ -297,9 +500,9 @@
 </section>
 
 
-<!-- =========================
+<!-- =====================================================
      CONTROLES
-========================= -->
+====================================================== -->
 
 <div class="controls">
 
@@ -314,61 +517,223 @@
 </div>
 
 
-<!-- =========================
-     RESULTADOS
-========================= -->
+<!-- =====================================================
+     ANALISIS FINAL
+====================================================== -->
 
-<section class="critical-analysis">
+<section class="final-analysis">
 
     <h2>
         Análisis del momento crítico
     </h2>
 
-    <div class="angle-results">
 
-        <div class="angle-card">
-            <h3>Hombro</h3>
-            <div
-                class="angle-value"
-                id="criticalShoulder">
-                --
+    <div class="planes">
+
+
+        <!-- =============================================
+             PLANO SAGITAL
+        ============================================== -->
+
+        <div class="plane">
+
+            <h3>
+                Plano Sagital
+            </h3>
+
+
+            <div class="angle-list">
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Hombro
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="sagittalShoulder">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Codo
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="sagittalElbow">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Cadera
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="sagittalHip">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Rodilla
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="sagittalKnee">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Tobillo
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="sagittalAnkle">
+
+                        --
+
+                    </div>
+
+                </div>
+
             </div>
+
         </div>
 
-        <div class="angle-card">
-            <h3>Codo</h3>
-            <div
-                class="angle-value"
-                id="criticalElbow">
-                --
-            </div>
-        </div>
 
-        <div class="angle-card">
-            <h3>Cadera</h3>
-            <div
-                class="angle-value"
-                id="criticalHip">
-                --
-            </div>
-        </div>
+        <!-- =============================================
+             PLANO FRONTAL
+        ============================================== -->
 
-        <div class="angle-card">
-            <h3>Rodilla</h3>
-            <div
-                class="angle-value"
-                id="criticalKnee">
-                --
-            </div>
-        </div>
+        <div class="plane">
 
-        <div class="angle-card">
-            <h3>Tobillo</h3>
-            <div
-                class="angle-value"
-                id="criticalAnkle">
-                --
+            <h3>
+                Plano Frontal
+            </h3>
+
+
+            <div class="angle-list">
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Hombro
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="frontalShoulder">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Codo
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="frontalElbow">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Cadera
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="frontalHip">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Rodilla
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="frontalKnee">
+
+                        --
+
+                    </div>
+
+                </div>
+
+
+                <div class="angle-card">
+
+                    <div class="angle-name">
+                        Tobillo
+                    </div>
+
+                    <div
+                        class="angle-value"
+                        id="frontalAnkle">
+
+                        --
+
+                    </div>
+
+                </div>
+
             </div>
+
         </div>
 
     </div>
@@ -376,1122 +741,1518 @@
 </section>
 
 
+
 <script>
 
+
+/* =========================================================
+   ELEMENTOS
+========================================================= */
+
+const sagittalVideo =
+    document.getElementById("sagittalVideo");
+
+const frontalVideo =
+    document.getElementById("frontalVideo");
+
+
+const sagittalCanvas =
+    document.getElementById("sagittalCanvas");
+
+const frontalCanvas =
+    document.getElementById("frontalCanvas");
+
+
+const sagittalCtx =
+    sagittalCanvas.getContext("2d");
+
+const frontalCtx =
+    frontalCanvas.getContext("2d");
+
+
+const playPause =
+    document.getElementById("playPause");
+
+const capture =
+    document.getElementById("capture");
+
+const status =
+    document.getElementById("status");
+
+
+/* =========================================================
+   ÁNGULOS ACTUALES
+========================================================= */
+
+let sagittalAngles = {
+
+    shoulder: null,
+    elbow: null,
+    hip: null,
+    knee: null,
+    ankle: null
+
+};
+
+
+let frontalAngles = {
+
+    shoulder: null,
+    elbow: null,
+    hip: null,
+    knee: null,
+    ankle: null
+
+};
+
+
+/* =========================================================
+   ÁNGULOS CAPTURADOS
+========================================================= */
+
+let capturedSagittal = {
+
+    shoulder: null,
+    elbow: null,
+    hip: null,
+    knee: null,
+    ankle: null
+
+};
+
+
+let capturedFrontal = {
+
+    shoulder: null,
+    elbow: null,
+    hip: null,
+    knee: null,
+    ankle: null
+
+};
+
+
+/* =========================================================
+   CARGA DEL VIDEO SAGITAL
+========================================================= */
+
+document
+    .getElementById("sagittalInput")
+    .addEventListener("change", function(event) {
+
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        sagittalVideo.src =
+            URL.createObjectURL(file);
+
+        sagittalVideo.load();
+
+        status.textContent =
+            "Video sagital cargado.";
+
+    });
+
+
+/* =========================================================
+   CARGA DEL VIDEO FRONTAL
+========================================================= */
+
+document
+    .getElementById("frontalInput")
+    .addEventListener("change", function(event) {
+
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        frontalVideo.src =
+            URL.createObjectURL(file);
+
+        frontalVideo.load();
+
+        status.textContent =
+            "Video frontal cargado.";
+
+    });
+
+
+/* =========================================================
+   CONFIGURACIÓN MEDIAPIPE
+========================================================= */
+
+const sagittalPose =
+    new Pose({
+
+        locateFile: function(file) {
+
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+
+        }
+
+    });
+
+
+const frontalPose =
+    new Pose({
+
+        locateFile: function(file) {
+
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+
+        }
+
+    });
+
+
+sagittalPose.setOptions({
+
+    modelComplexity: 2,
+
+    smoothLandmarks: true,
+
+    enableSegmentation: false,
+
+    minDetectionConfidence: 0.6,
+
+    minTrackingConfidence: 0.6
+
+});
+
+
+frontalPose.setOptions({
+
+    modelComplexity: 2,
+
+    smoothLandmarks: true,
+
+    enableSegmentation: false,
+
+    minDetectionConfidence: 0.6,
+
+    minTrackingConfidence: 0.6
+
+});
+
+
+/* =========================================================
+   FUNCIÓN PARA CALCULAR ÁNGULO
+========================================================= */
+
+function calculateAngle(a, b, c) {
+
+    const radians =
+        Math.atan2(
+            c.y - b.y,
+            c.x - b.x
+        )
+        -
+        Math.atan2(
+            a.y - b.y,
+            a.x - b.x
+        );
+
+
+    let degrees =
+        Math.abs(
+            radians * 180 / Math.PI
+        );
+
+
+    if (degrees > 180) {
+
+        degrees =
+            360 - degrees;
+
+    }
+
+
+    return Math.round(degrees);
+
+}
+
+
+/* =========================================================
+   AJUSTAR CANVAS AL TAMAÑO REAL DEL VIDEO
+========================================================= */
+
+/*
+   ESTA PARTE ES MUY IMPORTANTE.
+
+   El canvas utiliza exactamente las dimensiones
+   originales del video.
+
+   De esta manera:
+
+   landmark de MediaPipe
+          ↓
+   coordenada del video
+          ↓
+   misma coordenada del canvas
+
+   Resultado:
+   el punto queda exactamente sobre
+   la articulación.
+*/
+
+function resizeCanvasToVideo(video, canvas) {
+
+    if (
+        video.videoWidth === 0 ||
+        video.videoHeight === 0
+    ) {
+
+        return;
+
+    }
+
+
+    canvas.width =
+        video.videoWidth;
+
+    canvas.height =
+        video.videoHeight;
+
+}
+
+
+/* =========================================================
+   OBTENER PUNTO CORPORAL
+========================================================= */
+
+function getPoint(landmarks, index) {
+
+    return {
+
+        x:
+            landmarks[index].x,
+
+        y:
+            landmarks[index].y
+
+    };
+
+}
+
+
+/* =========================================================
+   DIBUJAR PUNTO EXACTAMENTE SOBRE ARTICULACIÓN
+========================================================= */
+
+function drawJoint(ctx, point, canvas) {
+
     /*
-    ============================================================
-        VARIABLES PRINCIPALES
-    ============================================================
+       Convertimos las coordenadas normalizadas
+       de MediaPipe a píxeles del video.
     */
 
-    const sagittalVideo =
-        document.getElementById("sagittalVideo");
+    const x =
+        point.x * canvas.width;
 
-    const frontalVideo =
-        document.getElementById("frontalVideo");
-
-    const sagittalCanvas =
-        document.getElementById("sagittalCanvas");
-
-    const frontalCanvas =
-        document.getElementById("frontalCanvas");
-
-    const sagittalCtx =
-        sagittalCanvas.getContext("2d");
-
-    const frontalCtx =
-        frontalCanvas.getContext("2d");
-
-
-    const playPause =
-        document.getElementById("playPause");
-
-    const capture =
-        document.getElementById("capture");
-
-    const status =
-        document.getElementById("status");
+    const y =
+        point.y * canvas.height;
 
 
     /*
-    ============================================================
-        RESULTADOS ACTUALES
-    ============================================================
+       Círculo pequeño y centrado exactamente
+       en el landmark.
     */
 
-    let currentAngles = {
+    ctx.beginPath();
 
-        shoulder: null,
+    ctx.arc(
+        x,
+        y,
+        6,
+        0,
+        Math.PI * 2
+    );
 
-        elbow: null,
 
-        hip: null,
+    ctx.fillStyle =
+        "#00ff66";
 
-        knee: null,
+    ctx.fill();
 
-        ankle: null
+
+    /*
+       Borde para que se vea incluso
+       sobre ropa oscura.
+    */
+
+    ctx.lineWidth = 2;
+
+    ctx.strokeStyle =
+        "#000000";
+
+    ctx.stroke();
+
+}
+
+
+/* =========================================================
+   DIBUJAR LÍNEA ENTRE ARTICULACIONES
+========================================================= */
+
+function drawLine(ctx, a, b, canvas) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        a.x * canvas.width,
+        a.y * canvas.height
+    );
+
+    ctx.lineTo(
+        b.x * canvas.width,
+        b.y * canvas.height
+    );
+
+    ctx.strokeStyle =
+        "rgba(0,255,102,0.85)";
+
+    ctx.lineWidth = 3;
+
+    ctx.stroke();
+
+}
+
+
+/* =========================================================
+   TEXTO DEL ÁNGULO
+========================================================= */
+
+function drawAngle(
+    ctx,
+    angle,
+    point,
+    canvas
+) {
+
+    if (
+        angle === null ||
+        angle === undefined
+    ) {
+
+        return;
+
+    }
+
+
+    const x =
+        point.x * canvas.width;
+
+    const y =
+        point.y * canvas.height;
+
+
+    /*
+       El texto queda cerca de la articulación,
+       pero EL PUNTO permanece exactamente
+       sobre la articulación.
+    */
+
+    ctx.font =
+        "bold 22px Arial";
+
+    ctx.lineWidth = 4;
+
+    ctx.strokeStyle =
+        "black";
+
+    ctx.fillStyle =
+        "white";
+
+
+    const text =
+        `${angle}°`;
+
+
+    ctx.strokeText(
+        text,
+        x + 10,
+        y - 10
+    );
+
+
+    ctx.fillText(
+        text,
+        x + 10,
+        y - 10
+    );
+
+}
+
+
+/* =========================================================
+   PROCESAR PLANO SAGITAL
+========================================================= */
+
+sagittalPose.onResults(function(results) {
+
+    if (!results.poseLandmarks) return;
+
+
+    const lm =
+        results.poseLandmarks;
+
+
+    resizeCanvasToVideo(
+        sagittalVideo,
+        sagittalCanvas
+    );
+
+
+    const ctx =
+        sagittalCtx;
+
+
+    const canvas =
+        sagittalCanvas;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    /*
+       LADO IZQUIERDO
+       para el análisis sagital.
+    */
+
+    const shoulder =
+        getPoint(lm, 11);
+
+    const elbow =
+        getPoint(lm, 13);
+
+    const wrist =
+        getPoint(lm, 15);
+
+    const hip =
+        getPoint(lm, 23);
+
+    const knee =
+        getPoint(lm, 25);
+
+    const ankle =
+        getPoint(lm, 27);
+
+    const foot =
+        getPoint(lm, 31);
+
+
+    /* =========================
+       ESQUELETO
+    ========================== */
+
+    drawLine(
+        ctx,
+        shoulder,
+        elbow,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        elbow,
+        wrist,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        shoulder,
+        hip,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        hip,
+        knee,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        knee,
+        ankle,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        ankle,
+        foot,
+        canvas
+    );
+
+
+    /* =========================
+       ÁNGULOS
+    ========================== */
+
+    const shoulderAngle =
+        calculateAngle(
+            hip,
+            shoulder,
+            elbow
+        );
+
+
+    const elbowAngle =
+        calculateAngle(
+            shoulder,
+            elbow,
+            wrist
+        );
+
+
+    const hipAngle =
+        calculateAngle(
+            shoulder,
+            hip,
+            knee
+        );
+
+
+    const kneeAngle =
+        calculateAngle(
+            hip,
+            knee,
+            ankle
+        );
+
+
+    const ankleAngle =
+        calculateAngle(
+            knee,
+            ankle,
+            foot
+        );
+
+
+    sagittalAngles = {
+
+        shoulder:
+            shoulderAngle,
+
+        elbow:
+            elbowAngle,
+
+        hip:
+            hipAngle,
+
+        knee:
+            kneeAngle,
+
+        ankle:
+            ankleAngle
 
     };
 
 
-    /*
-    ============================================================
-        RESULTADOS SAGITALES Y FRONTALES
-    ============================================================
-    */
-
-    let sagittalAngles = {};
-
-    let frontalAngles = {};
-
-
-    /*
-    ============================================================
-        CARGA DE VIDEOS
-    ============================================================
-    */
-
-    document
-        .getElementById("sagittalInput")
-        .addEventListener("change", function(event) {
-
-            const file = event.target.files[0];
-
-            if (!file) return;
-
-            sagittalVideo.src =
-                URL.createObjectURL(file);
-
-            sagittalVideo.load();
-
-            status.textContent =
-                "Video sagital cargado.";
-
-        });
-
-
-    document
-        .getElementById("frontalInput")
-        .addEventListener("change", function(event) {
-
-            const file = event.target.files[0];
-
-            if (!file) return;
-
-            frontalVideo.src =
-                URL.createObjectURL(file);
-
-            frontalVideo.load();
-
-            status.textContent =
-                "Video frontal cargado.";
-
-        });
-
-
-    /*
-    ============================================================
-        MEDIA PIPE POSE
-    ============================================================
-    */
-
-    const sagittalPose = new Pose({
-
-        locateFile: function(file) {
-
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-
-        }
-
-    });
-
-
-    const frontalPose = new Pose({
-
-        locateFile: function(file) {
-
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-
-        }
-
-    });
-
-
-    sagittalPose.setOptions({
-
-        modelComplexity: 1,
-
-        smoothLandmarks: true,
-
-        enableSegmentation: false,
-
-        smoothSegmentation: true,
-
-        minDetectionConfidence: 0.5,
-
-        minTrackingConfidence: 0.5
-
-    });
-
-
-    frontalPose.setOptions({
-
-        modelComplexity: 1,
-
-        smoothLandmarks: true,
-
-        enableSegmentation: false,
-
-        smoothSegmentation: true,
-
-        minDetectionConfidence: 0.5,
-
-        minTrackingConfidence: 0.5
-
-    });
-
-
-    /*
-    ============================================================
-        FUNCIÓN PARA CALCULAR ÁNGULOS
-    ============================================================
-    */
-
-    function calculateAngle(a, b, c) {
-
-        /*
-            b = articulación central
-
-            Calculamos el ángulo ABC
-        */
-
-        const radians =
-            Math.atan2(
-                c.y - b.y,
-                c.x - b.x
-            )
-            -
-            Math.atan2(
-                a.y - b.y,
-                a.x - b.x
-            );
-
-        let degrees =
-            Math.abs(
-                radians * 180 / Math.PI
-            );
-
-        if (degrees > 180) {
-
-            degrees =
-                360 - degrees;
-
-        }
-
-        return Math.round(degrees);
-
-    }
-
-
-    /*
-    ============================================================
-        PROCESAMIENTO DEL VIDEO SAGITAL
-    ============================================================
-    */
-
-    sagittalPose.onResults(function(results) {
-
-        drawPose(
-            results,
-            sagittalCanvas,
-            sagittalCtx,
-            "sagittal"
-        );
-
-    });
-
-
-    /*
-    ============================================================
-        PROCESAMIENTO DEL VIDEO FRONTAL
-    ============================================================
-    */
-
-    frontalPose.onResults(function(results) {
-
-        drawPose(
-            results,
-            frontalCanvas,
-            frontalCtx,
-            "frontal"
-        );
-
-    });
-
-
-    /*
-    ============================================================
-        DIBUJAR ESQUELETO + ÁNGULOS
-    ============================================================
-    */
-
-    function drawPose(
-        results,
-        canvas,
+    /* =========================
+       PUNTOS EXACTOS
+    ========================== */
+
+    drawJoint(
         ctx,
-        view
-    ) {
+        shoulder,
+        canvas
+    );
 
-        if (!results.poseLandmarks) return;
+    drawJoint(
+        ctx,
+        elbow,
+        canvas
+    );
 
+    drawJoint(
+        ctx,
+        hip,
+        canvas
+    );
 
-        const landmarks =
-            results.poseLandmarks;
+    drawJoint(
+        ctx,
+        knee,
+        canvas
+    );
 
-
-        /*
-        Ajustamos el canvas
-        */
-
-        canvas.width =
-            canvas.clientWidth;
-
-        canvas.height =
-            canvas.clientHeight;
-
-
-        ctx.clearRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-
-        /*
-        ========================================================
-            FUNCIÓN PARA CONVERTIR COORDENADAS
-        ========================================================
-        */
-
-        function point(index) {
-
-            return {
-
-                x:
-                    landmarks[index].x *
-                    canvas.width,
-
-                y:
-                    landmarks[index].y *
-                    canvas.height
-
-            };
-
-        }
+    drawJoint(
+        ctx,
+        ankle,
+        canvas
+    );
 
 
-        /*
-        ========================================================
-            PUNTOS CORPORALES
-        ========================================================
-        */
+    /* =========================
+       ÁNGULOS SOBRE ARTICULACIONES
+    ========================== */
 
-        const nose =
-            point(0);
+    drawAngle(
+        ctx,
+        shoulderAngle,
+        shoulder,
+        canvas
+    );
 
-        const leftShoulder =
-            point(11);
+    drawAngle(
+        ctx,
+        elbowAngle,
+        elbow,
+        canvas
+    );
 
-        const rightShoulder =
-            point(12);
+    drawAngle(
+        ctx,
+        hipAngle,
+        hip,
+        canvas
+    );
 
-        const leftElbow =
-            point(13);
+    drawAngle(
+        ctx,
+        kneeAngle,
+        knee,
+        canvas
+    );
 
-        const rightElbow =
-            point(14);
+    drawAngle(
+        ctx,
+        ankleAngle,
+        ankle,
+        canvas
+    );
 
-        const leftWrist =
-            point(15);
-
-        const rightWrist =
-            point(16);
-
-        const leftHip =
-            point(23);
-
-        const rightHip =
-            point(24);
-
-        const leftKnee =
-            point(25);
-
-        const rightKnee =
-            point(26);
-
-        const leftAnkle =
-            point(27);
-
-        const rightAnkle =
-            point(28);
-
-        const leftHeel =
-            point(29);
-
-        const rightHeel =
-            point(30);
-
-        const leftFoot =
-            point(31);
-
-        const rightFoot =
-            point(32);
+});
 
 
-        /*
-        ========================================================
-            DIBUJAR ESQUELETO
-        ========================================================
-        */
+/* =========================================================
+   PROCESAR PLANO FRONTAL
+========================================================= */
 
-        ctx.strokeStyle = "white";
+frontalPose.onResults(function(results) {
 
-        ctx.lineWidth = 3;
+    if (!results.poseLandmarks) return;
 
 
-        function line(a, b) {
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                a.x,
-                a.y
-            );
-
-            ctx.lineTo(
-                b.x,
-                b.y
-            );
-
-            ctx.stroke();
-
-        }
+    const lm =
+        results.poseLandmarks;
 
 
-        line(leftShoulder, leftElbow);
-        line(leftElbow, leftWrist);
-
-        line(rightShoulder, rightElbow);
-        line(rightElbow, rightWrist);
-
-        line(leftShoulder, leftHip);
-        line(rightShoulder, rightHip);
-
-        line(leftHip, leftKnee);
-        line(leftKnee, leftAnkle);
-
-        line(rightHip, rightKnee);
-        line(rightKnee, rightAnkle);
-
-        line(leftAnkle, leftFoot);
-        line(rightAnkle, rightFoot);
+    resizeCanvasToVideo(
+        frontalVideo,
+        frontalCanvas
+    );
 
 
-        /*
-        ========================================================
-            DIBUJAR PUNTOS
-        ========================================================
-        */
-
-        ctx.fillStyle = "yellow";
+    const ctx =
+        frontalCtx;
 
 
-        const importantPoints = [
+    const canvas =
+        frontalCanvas;
 
-            leftShoulder,
-            rightShoulder,
 
-            leftElbow,
-            rightElbow,
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
 
+
+    /*
+       LADO IZQUIERDO
+    */
+
+    const leftShoulder =
+        getPoint(lm, 11);
+
+    const leftElbow =
+        getPoint(lm, 13);
+
+    const leftWrist =
+        getPoint(lm, 15);
+
+    const leftHip =
+        getPoint(lm, 23);
+
+    const leftKnee =
+        getPoint(lm, 25);
+
+    const leftAnkle =
+        getPoint(lm, 27);
+
+    const leftFoot =
+        getPoint(lm, 31);
+
+
+    /*
+       LADO DERECHO
+    */
+
+    const rightShoulder =
+        getPoint(lm, 12);
+
+    const rightElbow =
+        getPoint(lm, 14);
+
+    const rightWrist =
+        getPoint(lm, 16);
+
+    const rightHip =
+        getPoint(lm, 24);
+
+    const rightKnee =
+        getPoint(lm, 26);
+
+    const rightAnkle =
+        getPoint(lm, 28);
+
+    const rightFoot =
+        getPoint(lm, 32);
+
+
+    /* =========================
+       ESQUELETO
+    ========================== */
+
+    drawLine(
+        ctx,
+        leftShoulder,
+        leftElbow,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        leftElbow,
+        leftWrist,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        leftShoulder,
+        leftHip,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        leftHip,
+        leftKnee,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        leftKnee,
+        leftAnkle,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        leftAnkle,
+        leftFoot,
+        canvas
+    );
+
+
+    drawLine(
+        ctx,
+        rightShoulder,
+        rightElbow,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        rightElbow,
+        rightWrist,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        rightShoulder,
+        rightHip,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        rightHip,
+        rightKnee,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        rightKnee,
+        rightAnkle,
+        canvas
+    );
+
+    drawLine(
+        ctx,
+        rightAnkle,
+        rightFoot,
+        canvas
+    );
+
+
+    /* =========================
+       ÁNGULOS IZQUIERDOS
+    ========================== */
+
+    const leftShoulderAngle =
+        calculateAngle(
             leftHip,
-            rightHip,
+            leftShoulder,
+            leftElbow
+        );
 
+
+    const leftElbowAngle =
+        calculateAngle(
+            leftShoulder,
+            leftElbow,
+            leftWrist
+        );
+
+
+    const leftHipAngle =
+        calculateAngle(
+            leftShoulder,
+            leftHip,
+            leftKnee
+        );
+
+
+    const leftKneeAngle =
+        calculateAngle(
+            leftHip,
             leftKnee,
-            rightKnee,
+            leftAnkle
+        );
 
+
+    const leftAnkleAngle =
+        calculateAngle(
+            leftKnee,
             leftAnkle,
+            leftFoot
+        );
+
+
+    /* =========================
+       ÁNGULOS DERECHOS
+    ========================== */
+
+    const rightShoulderAngle =
+        calculateAngle(
+            rightHip,
+            rightShoulder,
+            rightElbow
+        );
+
+
+    const rightElbowAngle =
+        calculateAngle(
+            rightShoulder,
+            rightElbow,
+            rightWrist
+        );
+
+
+    const rightHipAngle =
+        calculateAngle(
+            rightShoulder,
+            rightHip,
+            rightKnee
+        );
+
+
+    const rightKneeAngle =
+        calculateAngle(
+            rightHip,
+            rightKnee,
             rightAnkle
+        );
 
-        ];
+
+    const rightAnkleAngle =
+        calculateAngle(
+            rightKnee,
+            rightAnkle,
+            rightFoot
+        );
 
 
-        importantPoints.forEach(function(p) {
+    /* =========================
+       PROMEDIO DE AMBOS LADOS
+    ========================== */
 
-            ctx.beginPath();
+    const shoulderAngle =
+        Math.round(
+            (
+                leftShoulderAngle +
+                rightShoulderAngle
+            ) / 2
+        );
 
-            ctx.arc(
-                p.x,
-                p.y,
-                5,
-                0,
-                Math.PI * 2
-            );
 
-            ctx.fill();
+    const elbowAngle =
+        Math.round(
+            (
+                leftElbowAngle +
+                rightElbowAngle
+            ) / 2
+        );
+
+
+    const hipAngle =
+        Math.round(
+            (
+                leftHipAngle +
+                rightHipAngle
+            ) / 2
+        );
+
+
+    const kneeAngle =
+        Math.round(
+            (
+                leftKneeAngle +
+                rightKneeAngle
+            ) / 2
+        );
+
+
+    const ankleAngle =
+        Math.round(
+            (
+                leftAnkleAngle +
+                rightAnkleAngle
+            ) / 2
+        );
+
+
+    frontalAngles = {
+
+        shoulder:
+            shoulderAngle,
+
+        elbow:
+            elbowAngle,
+
+        hip:
+            hipAngle,
+
+        knee:
+            kneeAngle,
+
+        ankle:
+            ankleAngle
+
+    };
+
+
+    /* =========================
+       PUNTOS EXACTOS
+    ========================== */
+
+    drawJoint(
+        ctx,
+        leftShoulder,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        leftElbow,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        leftHip,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        leftKnee,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        leftAnkle,
+        canvas
+    );
+
+
+    drawJoint(
+        ctx,
+        rightShoulder,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        rightElbow,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        rightHip,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        rightKnee,
+        canvas
+    );
+
+    drawJoint(
+        ctx,
+        rightAnkle,
+        canvas
+    );
+
+
+    /* =========================
+       ÁNGULOS VISIBLES
+    ========================== */
+
+    drawAngle(
+        ctx,
+        shoulderAngle,
+        leftShoulder,
+        canvas
+    );
+
+    drawAngle(
+        ctx,
+        elbowAngle,
+        leftElbow,
+        canvas
+    );
+
+    drawAngle(
+        ctx,
+        hipAngle,
+        leftHip,
+        canvas
+    );
+
+    drawAngle(
+        ctx,
+        kneeAngle,
+        leftKnee,
+        canvas
+    );
+
+    drawAngle(
+        ctx,
+        ankleAngle,
+        leftAnkle,
+        canvas
+    );
+
+});
+
+
+/* =========================================================
+   PROCESAMIENTO DE LOS VIDEOS
+========================================================= */
+
+let processing = false;
+
+
+async function processVideos() {
+
+    if (
+        !sagittalVideo.paused &&
+        sagittalVideo.readyState >= 2
+    ) {
+
+        await sagittalPose.send({
+
+            image:
+                sagittalVideo
 
         });
-
-
-        /*
-        ========================================================
-            CÁLCULO DE ÁNGULOS
-        ========================================================
-        */
-
-        let shoulderAngle;
-
-        let elbowAngle;
-
-        let hipAngle;
-
-        let kneeAngle;
-
-        let ankleAngle;
-
-
-        /*
-        ========================================================
-            VISTA SAGITAL
-        ========================================================
-        */
-
-        if (view === "sagittal") {
-
-            /*
-                Utilizamos el lado izquierdo.
-
-                Hombro:
-                cadera - hombro - codo
-
-                Codo:
-                hombro - codo - muñeca
-
-                Cadera:
-                hombro - cadera - rodilla
-
-                Rodilla:
-                cadera - rodilla - tobillo
-
-                Tobillo:
-                rodilla - tobillo - pie
-            */
-
-
-            shoulderAngle =
-                calculateAngle(
-                    leftHip,
-                    leftShoulder,
-                    leftElbow
-                );
-
-
-            elbowAngle =
-                calculateAngle(
-                    leftShoulder,
-                    leftElbow,
-                    leftWrist
-                );
-
-
-            hipAngle =
-                calculateAngle(
-                    leftShoulder,
-                    leftHip,
-                    leftKnee
-                );
-
-
-            kneeAngle =
-                calculateAngle(
-                    leftHip,
-                    leftKnee,
-                    leftAnkle
-                );
-
-
-            ankleAngle =
-                calculateAngle(
-                    leftKnee,
-                    leftAnkle,
-                    leftFoot
-                );
-
-
-            sagittalAngles = {
-
-                shoulder:
-                    shoulderAngle,
-
-                elbow:
-                    elbowAngle,
-
-                hip:
-                    hipAngle,
-
-                knee:
-                    kneeAngle,
-
-                ankle:
-                    ankleAngle
-
-            };
-
-        }
-
-
-        /*
-        ========================================================
-            VISTA FRONTAL
-        ========================================================
-        */
-
-        if (view === "frontal") {
-
-            /*
-                Para la vista frontal calculamos
-                principalmente los ángulos laterales
-                entre los segmentos corporales.
-
-                Se utilizan ambos lados para
-                representar la postura frontal.
-            */
-
-
-            const leftKneeAngle =
-                calculateAngle(
-                    leftHip,
-                    leftKnee,
-                    leftAnkle
-                );
-
-
-            const rightKneeAngle =
-                calculateAngle(
-                    rightHip,
-                    rightKnee,
-                    rightAnkle
-                );
-
-
-            const leftHipAngle =
-                calculateAngle(
-                    leftShoulder,
-                    leftHip,
-                    leftKnee
-                );
-
-
-            const rightHipAngle =
-                calculateAngle(
-                    rightShoulder,
-                    rightHip,
-                    rightKnee
-                );
-
-
-            const leftShoulderAngle =
-                calculateAngle(
-                    leftHip,
-                    leftShoulder,
-                    leftElbow
-                );
-
-
-            const rightShoulderAngle =
-                calculateAngle(
-                    rightHip,
-                    rightShoulder,
-                    rightElbow
-                );
-
-
-            /*
-                Promediamos ambos lados.
-            */
-
-            kneeAngle =
-                Math.round(
-                    (
-                        leftKneeAngle +
-                        rightKneeAngle
-                    ) / 2
-                );
-
-
-            hipAngle =
-                Math.round(
-                    (
-                        leftHipAngle +
-                        rightHipAngle
-                    ) / 2
-                );
-
-
-            shoulderAngle =
-                Math.round(
-                    (
-                        leftShoulderAngle +
-                        rightShoulderAngle
-                    ) / 2
-                );
-
-
-            frontalAngles = {
-
-                shoulder:
-                    shoulderAngle,
-
-                hip:
-                    hipAngle,
-
-                knee:
-                    kneeAngle
-
-            };
-
-        }
-
-
-        /*
-        ========================================================
-            MOSTRAR ÁNGULOS SOBRE EL CUERPO
-        ========================================================
-        */
-
-        if (view === "sagittal") {
-
-            drawAngleText(
-                ctx,
-                shoulderAngle,
-                leftShoulder.x + 10,
-                leftShoulder.y - 10
-            );
-
-
-            drawAngleText(
-                ctx,
-                elbowAngle,
-                leftElbow.x + 10,
-                leftElbow.y
-            );
-
-
-            drawAngleText(
-                ctx,
-                hipAngle,
-                leftHip.x + 10,
-                leftHip.y - 10
-            );
-
-
-            drawAngleText(
-                ctx,
-                kneeAngle,
-                leftKnee.x + 10,
-                leftKnee.y
-            );
-
-
-            drawAngleText(
-                ctx,
-                ankleAngle,
-                leftAnkle.x + 10,
-                leftAnkle.y
-            );
-
-        }
-
-
-        if (view === "frontal") {
-
-            drawAngleText(
-                ctx,
-                shoulderAngle,
-                leftShoulder.x + 10,
-                leftShoulder.y
-            );
-
-
-            drawAngleText(
-                ctx,
-                hipAngle,
-                leftHip.x + 10,
-                leftHip.y
-            );
-
-
-            drawAngleText(
-                ctx,
-                kneeAngle,
-                leftKnee.x + 10,
-                leftKnee.y
-            );
-
-        }
-
-
-        /*
-        ========================================================
-            GUARDAR LOS ÁNGULOS ACTUALES
-        ========================================================
-        */
-
-        if (view === "sagittal") {
-
-            currentAngles = {
-
-                shoulder:
-                    shoulderAngle,
-
-                elbow:
-                    elbowAngle,
-
-                hip:
-                    hipAngle,
-
-                knee:
-                    kneeAngle,
-
-                ankle:
-                    ankleAngle
-
-            };
-
-        }
 
     }
 
 
-    /*
-    ============================================================
-        TEXTO DE ÁNGULOS
-    ============================================================
-    */
-
-    function drawAngleText(
-        ctx,
-        angle,
-        x,
-        y
+    if (
+        !frontalVideo.paused &&
+        frontalVideo.readyState >= 2
     ) {
 
-        if (angle === null ||
-            angle === undefined) {
+        await frontalPose.send({
+
+            image:
+                frontalVideo
+
+        });
+
+    }
+
+
+    if (
+        !sagittalVideo.paused ||
+        !frontalVideo.paused
+    ) {
+
+        requestAnimationFrame(
+            processVideos
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PLAY / PAUSA
+========================================================= */
+
+playPause.addEventListener(
+    "click",
+    async function() {
+
+        if (
+            !sagittalVideo.src ||
+            !frontalVideo.src
+        ) {
+
+            alert(
+                "Primero debes cargar los dos videos."
+            );
 
             return;
 
         }
 
 
-        ctx.font =
-            "bold 20px Arial";
-
-        ctx.fillStyle =
-            "white";
-
-        ctx.strokeStyle =
-            "black";
-
-        ctx.lineWidth = 4;
-
-
-        const text =
-            `${angle}°`;
-
-
-        ctx.strokeText(
-            text,
-            x,
-            y
-        );
-
-
-        ctx.fillText(
-            text,
-            x,
-            y
-        );
-
-    }
-
-
-    /*
-    ============================================================
-        PROCESAMIENTO CONTINUO
-    ============================================================
-    */
-
-    let processing = false;
-
-
-    async function processVideos() {
-
         if (
-            sagittalVideo.readyState >= 2 &&
-            !sagittalVideo.paused
+            sagittalVideo.paused ||
+            frontalVideo.paused
         ) {
 
-            await sagittalPose.send({
-
-                image:
-                    sagittalVideo
-
-            });
-
-        }
-
-
-        if (
-            frontalVideo.readyState >= 2 &&
-            !frontalVideo.paused
-        ) {
-
-            await frontalPose.send({
-
-                image:
-                    frontalVideo
-
-            });
-
-        }
-
-
-        if (
-            !sagittalVideo.paused ||
-            !frontalVideo.paused
-        ) {
-
-            requestAnimationFrame(
-                processVideos
-            );
-
-        }
-
-    }
-
-
-    /*
-    ============================================================
-        PLAY / PAUSA
-    ============================================================
-    */
-
-    playPause.addEventListener(
-        "click",
-        async function() {
-
-            if (
-                !sagittalVideo.src ||
-                !frontalVideo.src
-            ) {
-
-                alert(
-                    "Primero debes cargar los dos videos."
-                );
-
-                return;
-
-            }
-
-
             /*
-                Si están pausados,
-                reproducimos ambos.
+               Sincronizamos antes de reproducir.
             */
 
-            if (
-                sagittalVideo.paused &&
-                frontalVideo.paused
-            ) {
+            frontalVideo.currentTime =
+                sagittalVideo.currentTime;
 
-                await sagittalVideo.play();
 
-                await frontalVideo.play();
+            await sagittalVideo.play();
 
-                playPause.textContent =
-                    "⏸ Pausar";
+            await frontalVideo.play();
 
-                status.textContent =
-                    "Analizando movimiento...";
 
-                processVideos();
+            playPause.textContent =
+                "⏸ Pausar";
 
-            }
 
-            else {
+            status.textContent =
+                "Analizando movimiento...";
 
-                /*
-                    Pausamos ambos
-                */
 
-                sagittalVideo.pause();
-
-                frontalVideo.pause();
-
-                playPause.textContent =
-                    "▶ Reproducir";
-
-                status.textContent =
-                    "Análisis pausado.";
-
-            }
+            processVideos();
 
         }
-    );
 
+        else {
 
-    /*
-    ============================================================
-        SINCRONIZACIÓN
-    ============================================================
-    */
-
-    sagittalVideo.addEventListener(
-        "timeupdate",
-        function() {
-
-            if (
-                !frontalVideo.seeking &&
-                Math.abs(
-                    frontalVideo.currentTime -
-                    sagittalVideo.currentTime
-                ) > 0.08
-            ) {
-
-                frontalVideo.currentTime =
-                    sagittalVideo.currentTime;
-
-            }
-
-        }
-    );
-
-
-    frontalVideo.addEventListener(
-        "timeupdate",
-        function() {
-
-            if (
-                !sagittalVideo.seeking &&
-                Math.abs(
-                    sagittalVideo.currentTime -
-                    frontalVideo.currentTime
-                ) > 0.08
-            ) {
-
-                sagittalVideo.currentTime =
-                    frontalVideo.currentTime;
-
-            }
-
-        }
-    );
-
-
-    /*
-    ============================================================
-        CAPTURA DEL MOMENTO CRÍTICO
-    ============================================================
-    */
-
-    capture.addEventListener(
-        "click",
-        function() {
-
-            /*
-                Tomamos los valores que MediaPipe
-                está detectando exactamente en ese momento.
-            */
-
-            document
-                .getElementById("criticalShoulder")
-                .textContent =
-                currentAngles.shoulder !== null
-                    ? `${currentAngles.shoulder}°`
-                    : "--";
-
-
-            document
-                .getElementById("criticalElbow")
-                .textContent =
-                currentAngles.elbow !== null
-                    ? `${currentAngles.elbow}°`
-                    : "--";
-
-
-            document
-                .getElementById("criticalHip")
-                .textContent =
-                currentAngles.hip !== null
-                    ? `${currentAngles.hip}°`
-                    : "--";
-
-
-            document
-                .getElementById("criticalKnee")
-                .textContent =
-                currentAngles.knee !== null
-                    ? `${currentAngles.knee}°`
-                    : "--";
-
-
-            document
-                .getElementById("criticalAnkle")
-                .textContent =
-                currentAngles.ankle !== null
-                    ? `${currentAngles.ankle}°`
-                    : "--";
-
-
-            /*
-                Bajamos automáticamente
-                al análisis.
-            */
-
-            document
-                .querySelector(".critical-analysis")
-                .scrollIntoView({
-                    behavior: "smooth"
-                });
-
-        }
-    );
-
-
-    /*
-    ============================================================
-        CUANDO TERMINA UN VIDEO
-    ============================================================
-    */
-
-    sagittalVideo.addEventListener(
-        "ended",
-        function() {
+            sagittalVideo.pause();
 
             frontalVideo.pause();
+
 
             playPause.textContent =
                 "▶ Reproducir";
 
+
             status.textContent =
-                "Análisis finalizado.";
+                "Análisis pausado.";
 
         }
-    );
+
+    }
+);
+
+
+/* =========================================================
+   SINCRONIZACIÓN
+========================================================= */
+
+sagittalVideo.addEventListener(
+    "timeupdate",
+    function() {
+
+        if (
+            !frontalVideo.paused &&
+            Math.abs(
+                frontalVideo.currentTime -
+                sagittalVideo.currentTime
+            ) > 0.05
+        ) {
+
+            frontalVideo.currentTime =
+                sagittalVideo.currentTime;
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   CAPTURAR MOMENTO CRÍTICO
+========================================================= */
+
+capture.addEventListener(
+    "click",
+    function() {
+
+
+        /*
+           GUARDAMOS EXACTAMENTE LOS ÁNGULOS
+           QUE SE ESTÁN MOSTRANDO EN ESE MOMENTO.
+        */
+
+        capturedSagittal = {
+
+            shoulder:
+                sagittalAngles.shoulder,
+
+            elbow:
+                sagittalAngles.elbow,
+
+            hip:
+                sagittalAngles.hip,
+
+            knee:
+                sagittalAngles.knee,
+
+            ankle:
+                sagittalAngles.ankle
+
+        };
+
+
+        capturedFrontal = {
+
+            shoulder:
+                frontalAngles.shoulder,
+
+            elbow:
+                frontalAngles.elbow,
+
+            hip:
+                frontalAngles.hip,
+
+            knee:
+                frontalAngles.knee,
+
+            ankle:
+                frontalAngles.ankle
+
+        };
+
+
+        /*
+           MOSTRAR PLANO SAGITAL
+        */
+
+        document
+            .getElementById(
+                "sagittalShoulder"
+            )
+            .textContent =
+            capturedSagittal.shoulder !== null
+                ? capturedSagittal.shoulder + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "sagittalElbow"
+            )
+            .textContent =
+            capturedSagittal.elbow !== null
+                ? capturedSagittal.elbow + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "sagittalHip"
+            )
+            .textContent =
+            capturedSagittal.hip !== null
+                ? capturedSagittal.hip + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "sagittalKnee"
+            )
+            .textContent =
+            capturedSagittal.knee !== null
+                ? capturedSagittal.knee + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "sagittalAnkle"
+            )
+            .textContent =
+            capturedSagittal.ankle !== null
+                ? capturedSagittal.ankle + "°"
+                : "--";
+
+
+        /*
+           MOSTRAR PLANO FRONTAL
+        */
+
+        document
+            .getElementById(
+                "frontalShoulder"
+            )
+            .textContent =
+            capturedFrontal.shoulder !== null
+                ? capturedFrontal.shoulder + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "frontalElbow"
+            )
+            .textContent =
+            capturedFrontal.elbow !== null
+                ? capturedFrontal.elbow + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "frontalHip"
+            )
+            .textContent =
+            capturedFrontal.hip !== null
+                ? capturedFrontal.hip + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "frontalKnee"
+            )
+            .textContent =
+            capturedFrontal.knee !== null
+                ? capturedFrontal.knee + "°"
+                : "--";
+
+
+        document
+            .getElementById(
+                "frontalAnkle"
+            )
+            .textContent =
+            capturedFrontal.ankle !== null
+                ? capturedFrontal.ankle + "°"
+                : "--";
+
+
+        /*
+           BAJAR AUTOMÁTICAMENTE AL RESULTADO
+        */
+
+        document
+            .querySelector(".final-analysis")
+            .scrollIntoView({
+                behavior: "smooth"
+            });
+
+    }
+);
+
+
+/* =========================================================
+   AL FINALIZAR EL VIDEO
+========================================================= */
+
+sagittalVideo.addEventListener(
+    "ended",
+    function() {
+
+        frontalVideo.pause();
+
+        playPause.textContent =
+            "▶ Reproducir";
+
+        status.textContent =
+            "Análisis finalizado.";
+
+    }
+);
+
+
+/* =========================================================
+   AJUSTAR CANVAS CUANDO SE CARGA EL VIDEO
+========================================================= */
+
+sagittalVideo.addEventListener(
+    "loadedmetadata",
+    function() {
+
+        resizeCanvasToVideo(
+            sagittalVideo,
+            sagittalCanvas
+        );
+
+    }
+);
+
+
+frontalVideo.addEventListener(
+    "loadedmetadata",
+    function() {
+
+        resizeCanvasToVideo(
+            frontalVideo,
+            frontalCanvas
+        );
+
+    }
+);
 
 </script>
 
 </body>
-</html>
+                        </html>
