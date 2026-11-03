@@ -1,12 +1,14 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Analizador Biomecánico de Sentadilla</title>
-    <!-- Carga de MediaPipe (Versión estable fija) -->
+
+    <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
-    
+
     <style>
         :root {
             --bg: #f3f4f6;
@@ -18,30 +20,51 @@
             --text: #1f2937;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            width: 100%;
+            min-height: 100%;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
             padding: 15px;
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
             text-align: center;
+            width: 100%;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
+            min-width: 0;
         }
 
         h1 {
-            font-size: 1.8rem;
-            margin-bottom: 25px;
+            font-size: clamp(1.3rem, 4vw, 1.8rem);
+            margin: 10px 0 25px;
+            overflow-wrap: break-word;
         }
 
+        /* Carga de videos */
         .upload-section {
             display: flex;
             flex-direction: column;
             gap: 15px;
             margin-bottom: 20px;
+            width: 100%;
         }
 
         .upload-box {
@@ -50,15 +73,18 @@
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             flex: 1;
+            min-width: 0;
         }
 
         .upload-box h3 {
-            margin: 0 0 10px 0;
+            margin: 0 0 10px;
             font-size: 1.1rem;
         }
 
         input[type="file"] {
+            display: block;
             width: 100%;
+            max-width: 100%;
             font-size: 1rem;
             margin-bottom: 10px;
         }
@@ -68,14 +94,16 @@
             color: #6b7280;
             margin: 0;
             font-weight: 500;
+            overflow-wrap: anywhere;
         }
 
-        /* Contenedor de Videos */
+        /* Videos */
         .videos-grid {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
             gap: 15px;
             margin-bottom: 20px;
+            width: 100%;
         }
 
         .video-wrapper {
@@ -84,6 +112,7 @@
             border-radius: 10px;
             overflow: hidden;
             width: 100%;
+            min-width: 0;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
@@ -91,6 +120,8 @@
             width: 100%;
             height: auto;
             display: block;
+            max-width: 100%;
+            object-fit: contain;
         }
 
         canvas {
@@ -102,26 +133,31 @@
             pointer-events: none;
         }
 
+        /* Controles */
         .controls {
             display: flex;
             flex-direction: column;
             gap: 15px;
             margin-bottom: 30px;
-            align-items: center;
+            align-items: stretch;
+            width: 100%;
         }
 
         button {
-            padding: 15px 30px;
-            font-size: 1.1rem;
+            padding: 15px 20px;
+            font-size: 1.05rem;
             font-weight: bold;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
+            min-height: 48px;
             max-width: 400px;
+            margin: 0 auto;
             transition: background 0.2s;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         button:disabled {
@@ -129,25 +165,36 @@
             cursor: not-allowed;
         }
 
-        #btn-play { background-color: var(--primary); }
-        #btn-play:active { background-color: var(--primary-hover); }
+        #btn-play {
+            background-color: var(--primary);
+        }
+
+        #btn-play:active {
+            background-color: var(--primary-hover);
+        }
 
         #btn-capture {
             background-color: var(--success);
-            font-size: 1.2rem;
-            padding: 20px 30px;
+            font-size: 1.15rem;
+            padding: 20px;
         }
-        #btn-capture:active { background-color: var(--success-hover); }
+
+        #btn-capture:active {
+            background-color: var(--success-hover);
+        }
 
         /* Resultados */
         #results-section {
             background: var(--card-bg);
-            padding: 20px;
+            padding: clamp(15px, 3vw, 20px);
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: none;
             text-align: left;
             margin-bottom: 40px;
+            width: 100%;
+            min-width: 0;
+            overflow-wrap: break-word;
         }
 
         #results-section h2 {
@@ -155,215 +202,439 @@
             margin-top: 0;
             border-bottom: 2px solid var(--bg);
             padding-bottom: 10px;
+            font-size: clamp(1.15rem, 3vw, 1.5rem);
         }
 
         .results-grid {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
             gap: 20px;
+        }
+
+        .results-col {
+            min-width: 0;
         }
 
         .results-col h3 {
             color: var(--primary);
             margin-bottom: 15px;
+            font-size: 1.05rem;
         }
 
         .results-col p {
-            margin: 8px 0;
-            font-size: 1.1rem;
+            margin: 10px 0;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
             font-weight: 500;
+            line-height: 1.5;
         }
-        
+
         .side-indicator {
             font-size: 0.9rem;
             color: #6b7280;
             font-weight: normal;
         }
 
-        @media (min-width: 768px) {
-            .upload-section { flex-direction: row; }
-            .videos-grid { flex-direction: row; }
-            .results-grid { flex-direction: row; justify-content: space-around; }
-            .controls { flex-direction: row; justify-content: center; }
-            button { width: auto; }
+        /* Celulares pequeños */
+        @media (max-width: 380px) {
+            body {
+                padding: 10px;
+            }
+
+            .upload-box {
+                padding: 12px;
+            }
+
+            button {
+                font-size: 0.95rem;
+                padding: 13px 10px;
+            }
+
+            #btn-capture {
+                font-size: 1rem;
+                padding: 16px 10px;
+            }
+        }
+
+        /* Tablets y pantallas medianas */
+        @media (min-width: 600px) {
+            .upload-section {
+                flex-direction: row;
+            }
+
+            .videos-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .results-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 25px;
+            }
+
+            .controls {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+            }
+
+            button {
+                width: auto;
+                flex: 1;
+            }
+        }
+
+        /* Notebooks y computadores */
+        @media (min-width: 1024px) {
+            body {
+                padding: 20px;
+            }
+
+            .videos-grid {
+                gap: 20px;
+            }
+
+            .results-grid {
+                gap: 40px;
+            }
+
+            button {
+                flex: 0 1 400px;
+            }
+        }
+
+        /* Pantallas táctiles */
+        @media (hover: none) and (pointer: coarse) {
+            button {
+                min-height: 50px;
+            }
+
+            input[type="file"] {
+                min-height: 40px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
+
         <h1>Analizador Biomecánico de Sentadilla</h1>
 
         <div class="upload-section">
+
             <div class="upload-box">
                 <h3>Plano Sagital (Lateral)</h3>
                 <input type="file" id="input-sag" accept="video/*">
                 <p id="msg-sag" class="upload-msg">Esperando video...</p>
             </div>
+
             <div class="upload-box">
                 <h3>Plano Frontal (Frente)</h3>
                 <input type="file" id="input-front" accept="video/*">
                 <p id="msg-front" class="upload-msg">Esperando video...</p>
             </div>
+
         </div>
 
         <div class="videos-grid">
+
             <div class="video-wrapper">
                 <video id="video-sag" playsinline muted></video>
                 <canvas id="canvas-sag"></canvas>
             </div>
+
             <div class="video-wrapper">
                 <video id="video-front" playsinline muted></video>
                 <canvas id="canvas-front"></canvas>
             </div>
+
         </div>
 
         <div class="controls">
-            <button id="btn-play" disabled>▶ Reproducir / ⏸ Pausar</button>
-            <button id="btn-capture" disabled>📸 Capturar momento crítico</button>
+            <button id="btn-play" disabled>
+                ▶ Reproducir / ⏸ Pausar
+            </button>
+
+            <button id="btn-capture" disabled>
+                📸 Capturar momento crítico
+            </button>
         </div>
 
         <div id="results-section">
+
             <h2>Análisis Biomecánico del Momento Crítico</h2>
+
             <div class="results-grid">
+
                 <div class="results-col">
-                    <h3>PLANO SAGITAL <span id="res-sag-side" class="side-indicator"></span></h3>
-                    <p>Ángulo de Hombro: <span id="res-sag-hombro">--°</span></p>
-                    <p>Flexión de Codo: <span id="res-sag-codo">--°</span></p>
-                    <p>Flexión de Tronco / Cadera: <span id="res-sag-cadera">--°</span></p>
-                    <p>Flexión de Rodilla: <span id="res-sag-rodilla">--°</span></p>
-                    <p>Dorsiflexión de Tobillo: <span id="res-sag-tobillo">--°</span></p>
+
+                    <h3>
+                        PLANO SAGITAL
+                        <span id="res-sag-side" class="side-indicator"></span>
+                    </h3>
+
+                    <p>Ángulo de Hombro:
+                        <span id="res-sag-hombro">--°</span>
+                    </p>
+
+                    <p>Flexión de Codo:
+                        <span id="res-sag-codo">--°</span>
+                    </p>
+
+                    <p>Flexión de Tronco / Cadera:
+                        <span id="res-sag-cadera">--°</span>
+                    </p>
+
+                    <p>Flexión de Rodilla:
+                        <span id="res-sag-rodilla">--°</span>
+                    </p>
+
+                    <p>Dorsiflexión de Tobillo:
+                        <span id="res-sag-tobillo">--°</span>
+                    </p>
+
                 </div>
+
                 <div class="results-col">
-                    <h3>PLANO FRONTAL <span class="side-indicator">(Der / Izq)</span></h3>
-                    <p>Alineación Hombros: <span id="res-front-hombro">--° / --°</span></p>
-                    <p>Alineación Codos: <span id="res-front-codo">--° / --°</span></p>
-                    <p>Alineación Pélvica: <span id="res-front-cadera">--° / --°</span></p>
-                    <p>Valgo/Varo de Rodillas: <span id="res-front-rodilla">--° / --°</span></p>
-                    <p>Alineación Tobillos: <span id="res-front-tobillo">--° / --°</span></p>
+
+                    <h3>
+                        PLANO FRONTAL
+                        <span class="side-indicator">(Der / Izq)</span>
+                    </h3>
+
+                    <p>Alineación Hombros:
+                        <span id="res-front-hombro">--° / --°</span>
+                    </p>
+
+                    <p>Alineación Codos:
+                        <span id="res-front-codo">--° / --°</span>
+                    </p>
+
+                    <p>Alineación Pélvica:
+                        <span id="res-front-cadera">--° / --°</span>
+                    </p>
+
+                    <p>Valgo/Varo de Rodillas:
+                        <span id="res-front-rodilla">--° / --°</span>
+                    </p>
+
+                    <p>Alineación Tobillos:
+                        <span id="res-front-tobillo">--° / --°</span>
+                    </p>
+
                 </div>
+
             </div>
         </div>
+
     </div>
 
     <script>
+
         const videoSag = document.getElementById('video-sag');
         const videoFront = document.getElementById('video-front');
+
         const canvasSag = document.getElementById('canvas-sag');
         const canvasFront = document.getElementById('canvas-front');
+
         const ctxSag = canvasSag.getContext('2d');
         const ctxFront = canvasFront.getContext('2d');
-        
+
         const btnPlay = document.getElementById('btn-play');
         const btnCapture = document.getElementById('btn-capture');
 
         let isPlaying = false;
         let isProcessing = false;
         let animationFrameId = null;
-        
+
         const currentData = {
-            sagittal: { side: '', hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' },
-            frontal: { hombro: '--', codo: '--', cadera: '--', rodilla: '--', tobillo: '--' }
+            sagittal: {
+                side: '',
+                hombro: '--',
+                codo: '--',
+                cadera: '--',
+                rodilla: '--',
+                tobillo: '--'
+            },
+            frontal: {
+                hombro: '--',
+                codo: '--',
+                cadera: '--',
+                rodilla: '--',
+                tobillo: '--'
+            }
         };
 
         const L = {
-            l_sh: 11, r_sh: 12, // Hombros
-            l_el: 13, r_el: 14, // Codos
-            l_wr: 15, r_wr: 16, // Muñecas
-            l_hi: 23, r_hi: 24, // Caderas
-            l_kn: 25, r_kn: 26, // Rodillas
-            l_an: 27, r_an: 28, // Tobillos
-            l_ft: 31, r_ft: 32  // Puntas del pie
+            l_sh: 11, r_sh: 12,
+            l_el: 13, r_el: 14,
+            l_wr: 15, r_wr: 16,
+            l_hi: 23, r_hi: 24,
+            l_kn: 25, r_kn: 26,
+            l_an: 27, r_an: 28,
+            l_ft: 31, r_ft: 32
         };
 
         function calculateAngle(p1, p2, p3) {
-            if (!p1 || !p2 || !p3 || p1.visibility < 0.4 || p2.visibility < 0.4 || p3.visibility < 0.4) return null;
-            let radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x);
+
+            if (
+                !p1 || !p2 || !p3 ||
+                p1.visibility < 0.4 ||
+                p2.visibility < 0.4 ||
+                p3.visibility < 0.4
+            ) return null;
+
+            let radians =
+                Math.atan2(p3.y - p2.y, p3.x - p2.x) -
+                Math.atan2(p1.y - p2.y, p1.x - p2.x);
+
             let angle = Math.abs(radians * 180.0 / Math.PI);
-            if (angle > 180.0) angle = 360.0 - angle;
+
+            if (angle > 180.0) {
+                angle = 360.0 - angle;
+            }
+
             return Math.round(angle);
         }
 
         function drawLine(ctx, p1, p2, width, height) {
-            if (!p1 || !p2 || p1.visibility < 0.4 || p2.visibility < 0.4) return;
+
+            if (
+                !p1 || !p2 ||
+                p1.visibility < 0.4 ||
+                p2.visibility < 0.4
+            ) return;
+
             ctx.beginPath();
+
             ctx.moveTo(p1.x * width, p1.y * height);
             ctx.lineTo(p2.x * width, p2.y * height);
+
             ctx.lineWidth = 3;
-            ctx.strokeStyle = '#00ff00'; 
+            ctx.strokeStyle = '#00ff00';
+
             ctx.stroke();
         }
 
-        // Nueva función: Malla facial geométrica
-        function drawFaceMesh(ctx, landmarks, width, height) {
-            // Conectamos los 11 puntos faciales de MediaPipe para crear la máscara de triángulos
-            const FACE_TRIS = [
-                [0, 1], [1, 2], [2, 3], [3, 7], // Ojo izq a oreja
-                [0, 4], [4, 5], [5, 6], [6, 8], // Ojo der a oreja
-                [0, 9], [0, 10], [9, 10],       // Nariz a boca y boca
-                [9, 7], [10, 8],                // Boca a orejas
-                [1, 4],                         // Puente nariz
-                [3, 9], [6, 10],                // Mejillas exteriores
-                [2, 9], [5, 10]                 // Mejillas interiores
-            ];
-            
-            ctx.lineWidth = 1.5;
-            ctx.strokeStyle = '#00ffff'; // Color cyan estilo tecnológico
+        // Malla facial geométrica
 
-            // Dibujar las líneas de la máscara
+        function drawFaceMesh(ctx, landmarks, width, height) {
+
+            const FACE_TRIS = [
+                [0, 1], [1, 2], [2, 3], [3, 7],
+                [0, 4], [4, 5], [5, 6], [6, 8],
+                [0, 9], [0, 10], [9, 10],
+                [9, 7], [10, 8],
+                [1, 4],
+                [3, 9], [6, 10],
+                [2, 9], [5, 10]
+            ];
+
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#00ffff';
+
             FACE_TRIS.forEach(pair => {
+
                 const p1 = landmarks[pair[0]];
                 const p2 = landmarks[pair[1]];
-                if (p1 && p2 && p1.visibility > 0.4 && p2.visibility > 0.4) {
+
+                if (
+                    p1 && p2 &&
+                    p1.visibility > 0.4 &&
+                    p2.visibility > 0.4
+                ) {
+
                     ctx.beginPath();
+
                     ctx.moveTo(p1.x * width, p1.y * height);
                     ctx.lineTo(p2.x * width, p2.y * height);
+
                     ctx.stroke();
                 }
             });
 
-            // Dibujar pequeños puntos en los nodos de la cara
             ctx.fillStyle = '#00ffff';
-            for(let i = 0; i <= 10; i++) {
+
+            for (let i = 0; i <= 10; i++) {
+
                 const p = landmarks[i];
+
                 if (p && p.visibility > 0.4) {
+
                     ctx.beginPath();
-                    ctx.arc(p.x * width, p.y * height, 2, 0, 2 * Math.PI);
+                    ctx.arc(
+                        p.x * width,
+                        p.y * height,
+                        2,
+                        0,
+                        2 * Math.PI
+                    );
+
                     ctx.fill();
                 }
             }
         }
 
         function drawJoint(ctx, landmark, angleValue, width, height) {
+
             if (!landmark || landmark.visibility < 0.4) return;
+
             const x = landmark.x * width;
             const y = landmark.y * height;
 
             ctx.beginPath();
             ctx.arc(x, y, 6, 0, 2 * Math.PI);
+
             ctx.fillStyle = '#ff0000';
             ctx.fill();
+
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#ffffff';
             ctx.stroke();
 
             if (angleValue !== null) {
+
                 ctx.font = "bold 18px Arial";
                 ctx.fillStyle = "#ffffff";
                 ctx.strokeStyle = "#000000";
                 ctx.lineWidth = 3;
-                ctx.strokeText(`${angleValue}°`, x + 12, y - 10);
-                ctx.fillText(`${angleValue}°`, x + 12, y - 10);
+
+                ctx.strokeText(
+                    `${angleValue}°`,
+                    x + 12,
+                    y - 10
+                );
+
+                ctx.fillText(
+                    `${angleValue}°`,
+                    x + 12,
+                    y - 10
+                );
             }
         }
 
+        // ANÁLISIS SAGITAL
+
         function onResultsSagittal(results) {
-            ctxSag.clearRect(0, 0, canvasSag.width, canvasSag.height);
+
+            ctxSag.clearRect(
+                0, 0,
+                canvasSag.width,
+                canvasSag.height
+            );
+
             if (!results.poseLandmarks) return;
 
             const lm = results.poseLandmarks;
-            const leftVisibility = lm[L.l_hi].visibility + lm[L.l_kn].visibility;
-            const rightVisibility = lm[L.r_hi].visibility + lm[L.r_kn].visibility;
+
+            const leftVisibility =
+                lm[L.l_hi].visibility +
+                lm[L.l_kn].visibility;
+
+            const rightVisibility =
+                lm[L.r_hi].visibility +
+                lm[L.r_kn].visibility;
+
             const isLeft = leftVisibility > rightVisibility;
 
             const p_sh = isLeft ? L.l_sh : L.r_sh;
@@ -374,13 +645,29 @@
             const p_an = isLeft ? L.l_an : L.r_an;
             const p_ft = isLeft ? L.l_ft : L.r_ft;
 
-            const ang_sh = calculateAngle(lm[p_hi], lm[p_sh], lm[p_el]);
-            const ang_el = calculateAngle(lm[p_sh], lm[p_el], lm[p_wr]);
-            const ang_hi = calculateAngle(lm[p_sh], lm[p_hi], lm[p_kn]);
-            const ang_kn = calculateAngle(lm[p_hi], lm[p_kn], lm[p_an]);
-            const ang_an = calculateAngle(lm[p_kn], lm[p_an], lm[p_ft]);
+            const ang_sh = calculateAngle(
+                lm[p_hi], lm[p_sh], lm[p_el]
+            );
 
-            currentData.sagittal.side = isLeft ? '(Perfil Izquierdo)' : '(Perfil Derecho)';
+            const ang_el = calculateAngle(
+                lm[p_sh], lm[p_el], lm[p_wr]
+            );
+
+            const ang_hi = calculateAngle(
+                lm[p_sh], lm[p_hi], lm[p_kn]
+            );
+
+            const ang_kn = calculateAngle(
+                lm[p_hi], lm[p_kn], lm[p_an]
+            );
+
+            const ang_an = calculateAngle(
+                lm[p_kn], lm[p_an], lm[p_ft]
+            );
+
+            currentData.sagittal.side =
+                isLeft ? '(Perfil Izquierdo)' : '(Perfil Derecho)';
+
             currentData.sagittal.hombro = ang_sh ?? '--';
             currentData.sagittal.codo = ang_el ?? '--';
             currentData.sagittal.cadera = ang_hi ?? '--';
@@ -390,7 +677,6 @@
             const w = canvasSag.width;
             const h = canvasSag.height;
 
-            // Dibujar la máscara facial en el plano sagital
             drawFaceMesh(ctxSag, lm, w, h);
 
             drawLine(ctxSag, lm[p_sh], lm[p_el], w, h);
@@ -405,40 +691,82 @@
             drawJoint(ctxSag, lm[p_hi], ang_hi, w, h);
             drawJoint(ctxSag, lm[p_kn], ang_kn, w, h);
             drawJoint(ctxSag, lm[p_an], ang_an, w, h);
-            drawJoint(ctxSag, lm[p_wr], null, w, h); 
+            drawJoint(ctxSag, lm[p_wr], null, w, h);
             drawJoint(ctxSag, lm[p_ft], null, w, h);
         }
 
+        // ANÁLISIS FRONTAL
+
         function onResultsFrontal(results) {
-            ctxFront.clearRect(0, 0, canvasFront.width, canvasFront.height);
+
+            ctxFront.clearRect(
+                0, 0,
+                canvasFront.width,
+                canvasFront.height
+            );
+
             if (!results.poseLandmarks) return;
 
             const lm = results.poseLandmarks;
+
             const w = canvasFront.width;
             const h = canvasFront.height;
 
-            const l_sh = calculateAngle(lm[L.l_hi], lm[L.l_sh], lm[L.l_el]);
-            const r_sh = calculateAngle(lm[L.r_hi], lm[L.r_sh], lm[L.r_el]);
-            
-            const l_el = calculateAngle(lm[L.l_sh], lm[L.l_el], lm[L.l_wr]);
-            const r_el = calculateAngle(lm[L.r_sh], lm[L.r_el], lm[L.r_wr]);
-            
-            const l_hi = calculateAngle(lm[L.l_sh], lm[L.l_hi], lm[L.l_kn]);
-            const r_hi = calculateAngle(lm[L.r_sh], lm[L.r_hi], lm[L.r_kn]);
-            
-            const l_kn = calculateAngle(lm[L.l_hi], lm[L.l_kn], lm[L.l_an]);
-            const r_kn = calculateAngle(lm[L.r_hi], lm[L.r_kn], lm[L.r_an]);
-            
-            const l_an = calculateAngle(lm[L.l_kn], lm[L.l_an], lm[L.l_ft]);
-            const r_an = calculateAngle(lm[L.r_kn], lm[L.r_an], lm[L.r_ft]);
+            const l_sh = calculateAngle(
+                lm[L.l_hi], lm[L.l_sh], lm[L.l_el]
+            );
 
-            currentData.frontal.hombro = `${r_sh ?? '--'}° / ${l_sh ?? '--'}°`;
-            currentData.frontal.codo = `${r_el ?? '--'}° / ${l_el ?? '--'}°`;
-            currentData.frontal.cadera = `${r_hi ?? '--'}° / ${l_hi ?? '--'}°`;
-            currentData.frontal.rodilla = `${r_kn ?? '--'}° / ${l_kn ?? '--'}°`;
-            currentData.frontal.tobillo = `${r_an ?? '--'}° / ${l_an ?? '--'}°`;
+            const r_sh = calculateAngle(
+                lm[L.r_hi], lm[L.r_sh], lm[L.r_el]
+            );
 
-            // Dibujar la máscara facial en el plano frontal
+            const l_el = calculateAngle(
+                lm[L.l_sh], lm[L.l_el], lm[L.l_wr]
+            );
+
+            const r_el = calculateAngle(
+                lm[L.r_sh], lm[L.r_el], lm[L.r_wr]
+            );
+
+            const l_hi = calculateAngle(
+                lm[L.l_sh], lm[L.l_hi], lm[L.l_kn]
+            );
+
+            const r_hi = calculateAngle(
+                lm[L.r_sh], lm[L.r_hi], lm[L.r_kn]
+            );
+
+            const l_kn = calculateAngle(
+                lm[L.l_hi], lm[L.l_kn], lm[L.l_an]
+            );
+
+            const r_kn = calculateAngle(
+                lm[L.r_hi], lm[L.r_kn], lm[L.r_an]
+            );
+
+            const l_an = calculateAngle(
+                lm[L.l_kn], lm[L.l_an], lm[L.l_ft]
+            );
+
+            const r_an = calculateAngle(
+                lm[L.r_kn], lm[L.r_an], lm[L.r_ft]
+            );
+
+            currentData.frontal.hombro =
+                `${r_sh ?? '--'}° / ${l_sh ?? '--'}°`;
+
+            currentData.frontal.codo =
+                `${r_el ?? '--'}° / ${l_el ?? '--'}°`;
+
+            currentData.frontal.cadera =
+                `${r_hi ?? '--'}° / ${l_hi ?? '--'}°`;
+
+            currentData.frontal.rodilla =
+                `${r_kn ?? '--'}° / ${l_kn ?? '--'}°`;
+
+            currentData.frontal.tobillo =
+                `${r_an ?? '--'}° / ${l_an ?? '--'}°`;
+
             drawFaceMesh(ctxFront, lm, w, h);
 
             drawLine(ctxFront, lm[L.l_sh], lm[L.l_el], w, h);
@@ -475,6 +803,8 @@
             drawJoint(ctxFront, lm[L.r_ft], null, w, h);
         }
 
+        // CONFIGURACIÓN MEDIAPIPE
+
         const poseOptions = {
             modelComplexity: 0,
             smoothLandmarks: true,
@@ -482,103 +812,210 @@
             minTrackingConfidence: 0.5
         };
 
-        const poseSagittal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`});
+        const poseSagittal = new Pose({
+            locateFile: (file) =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+        });
+
         poseSagittal.setOptions(poseOptions);
         poseSagittal.onResults(onResultsSagittal);
 
-        const poseFrontal = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`});
+        const poseFrontal = new Pose({
+            locateFile: (file) =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+        });
+
         poseFrontal.setOptions(poseOptions);
         poseFrontal.onResults(onResultsFrontal);
 
-        Promise.all([poseSagittal.initialize(), poseFrontal.initialize()]).then(() => {
+        Promise.all([
+            poseSagittal.initialize(),
+            poseFrontal.initialize()
+        ]).then(() => {
+
             btnPlay.disabled = false;
             btnCapture.disabled = false;
+
         }).catch(() => {
+
             btnPlay.disabled = false;
             btnCapture.disabled = false;
+
         });
 
+        // PROCESAMIENTO DE VIDEOS
+
         async function processFrames() {
+
             if (!isPlaying) return;
+
             if (!isProcessing) {
+
                 isProcessing = true;
+
                 try {
+
                     const promises = [];
-                    if (videoSag.readyState >= 2 && !videoSag.paused) promises.push(poseSagittal.send({image: videoSag}));
-                    if (videoFront.readyState >= 2 && !videoFront.paused) promises.push(poseFrontal.send({image: videoFront}));
+
+                    if (
+                        videoSag.readyState >= 2 &&
+                        !videoSag.paused
+                    ) {
+                        promises.push(
+                            poseSagittal.send({ image: videoSag })
+                        );
+                    }
+
+                    if (
+                        videoFront.readyState >= 2 &&
+                        !videoFront.paused
+                    ) {
+                        promises.push(
+                            poseFrontal.send({ image: videoFront })
+                        );
+                    }
+
                     await Promise.all(promises);
+
                 } catch (error) {
                     // Silencio
                 }
+
                 isProcessing = false;
             }
+
             animationFrameId = requestAnimationFrame(processFrames);
         }
 
+        // CARGA DE VIDEOS
+
         function setupVideo(inputId, videoId, canvasId, msgId) {
+
             const inputElem = document.getElementById(inputId);
             const videoElem = document.getElementById(videoId);
             const canvasElem = document.getElementById(canvasId);
             const msgElem = document.getElementById(msgId);
 
             inputElem.addEventListener('change', (e) => {
+
                 const file = e.target.files[0];
+
                 if (file) {
+
                     videoElem.src = URL.createObjectURL(file);
-                    msgElem.innerText = '✅ Video cargado exitosamente';
+
+                    msgElem.innerText =
+                        '✅ Video cargado exitosamente';
+
                     msgElem.style.color = 'var(--success)';
                     msgElem.style.fontWeight = 'bold';
                 }
             });
 
             videoElem.addEventListener('loadeddata', () => {
+
                 canvasElem.width = videoElem.videoWidth;
                 canvasElem.height = videoElem.videoHeight;
-                if(videoElem === videoSag) poseSagittal.send({image: videoElem});
-                if(videoElem === videoFront) poseFrontal.send({image: videoElem});
+
+                if (videoElem === videoSag) {
+                    poseSagittal.send({ image: videoElem });
+                }
+
+                if (videoElem === videoFront) {
+                    poseFrontal.send({ image: videoElem });
+                }
             });
         }
 
-        setupVideo('input-sag', 'video-sag', 'canvas-sag', 'msg-sag');
-        setupVideo('input-front', 'video-front', 'canvas-front', 'msg-front');
+        setupVideo(
+            'input-sag',
+            'video-sag',
+            'canvas-sag',
+            'msg-sag'
+        );
+
+        setupVideo(
+            'input-front',
+            'video-front',
+            'canvas-front',
+            'msg-front'
+        );
+
+        // REPRODUCIR Y PAUSAR
 
         btnPlay.addEventListener('click', () => {
+
             if (!videoSag.src && !videoFront.src) {
+
                 alert('Por favor carga al menos un video primero.');
                 return;
             }
+
             if (isPlaying) {
+
                 videoSag.pause();
                 videoFront.pause();
+
                 isPlaying = false;
+
                 cancelAnimationFrame(animationFrameId);
+
             } else {
+
                 videoSag.play().catch(e => {});
                 videoFront.play().catch(e => {});
+
                 isPlaying = true;
+
                 processFrames();
             }
         });
 
-        btnCapture.addEventListener('click', () => {
-            document.getElementById('results-section').style.display = 'block';
-            
-            document.getElementById('res-sag-side').innerText = currentData.sagittal.side;
+        // CAPTURAR MOMENTO CRÍTICO
 
-            document.getElementById('res-sag-hombro').innerText = currentData.sagittal.hombro + '°';
-            document.getElementById('res-sag-codo').innerText = currentData.sagittal.codo + '°';
-            document.getElementById('res-sag-cadera').innerText = currentData.sagittal.cadera + '°';
-            document.getElementById('res-sag-rodilla').innerText = currentData.sagittal.rodilla + '°';
-            document.getElementById('res-sag-tobillo').innerText = currentData.sagittal.tobillo + '°';
-            
-            document.getElementById('res-front-hombro').innerText = currentData.frontal.hombro;
-            document.getElementById('res-front-codo').innerText = currentData.frontal.codo;
-            document.getElementById('res-front-cadera').innerText = currentData.frontal.cadera;
-            document.getElementById('res-front-rodilla').innerText = currentData.frontal.rodilla;
-            document.getElementById('res-front-tobillo').innerText = currentData.frontal.tobillo;
-            
-            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+        btnCapture.addEventListener('click', () => {
+
+            document.getElementById('results-section').style.display = 'block';
+
+            document.getElementById('res-sag-side').innerText =
+                currentData.sagittal.side;
+
+            document.getElementById('res-sag-hombro').innerText =
+                currentData.sagittal.hombro + '°';
+
+            document.getElementById('res-sag-codo').innerText =
+                currentData.sagittal.codo + '°';
+
+            document.getElementById('res-sag-cadera').innerText =
+                currentData.sagittal.cadera + '°';
+
+            document.getElementById('res-sag-rodilla').innerText =
+                currentData.sagittal.rodilla + '°';
+
+            document.getElementById('res-sag-tobillo').innerText =
+                currentData.sagittal.tobillo + '°';
+
+            document.getElementById('res-front-hombro').innerText =
+                currentData.frontal.hombro;
+
+            document.getElementById('res-front-codo').innerText =
+                currentData.frontal.codo;
+
+            document.getElementById('res-front-cadera').innerText =
+                currentData.frontal.cadera;
+
+            document.getElementById('res-front-rodilla').innerText =
+                currentData.frontal.rodilla;
+
+            document.getElementById('res-front-tobillo').innerText =
+                currentData.frontal.tobillo;
+
+            document.getElementById('results-section').scrollIntoView({
+                behavior: 'smooth'
+            });
         });
+
     </script>
+
 </body>
 </html>
